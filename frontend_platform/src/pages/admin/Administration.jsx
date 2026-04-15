@@ -1,0 +1,1476 @@
+import { useState, useEffect, useRef } from "react";
+import { useTheme } from "../../components/layout/Layout";
+import api from "../../services/api";
+import * as XLSX from "xlsx";
+import { equipesAPI, pointagesAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+const ROLES = ["operateur", "chef_atelier", "directeur", "admin"];
+const ROLE_LABELS = {
+  operateur: "Opérateur", chef_atelier: "Chef d'atelier",
+  directeur: "Directeur", admin: "Administrateur",
+};
+const ROLE_COLORS = {
+  operateur: "#64748B", chef_atelier: "#10B981",
+  directeur: "#3B82F6", admin: "#DA291C",
+};
+const CHAINES = ["Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
+
+const FONCTIONS_AM = ["Agent de maîtrise"];
+
+const CATEGORIES_SPECIALES = [
+  { key:"am",          label:"Agent de maîtrise", color:"#F97316", bg:"rgba(249,115,22,0.1)",  max:6  },
+  { key:"prestataire", label:"Prestataire",        color:"#8B5CF6", bg:"rgba(139,92,246,0.1)", max:null },
+  { key:"pepiniere",   label:"Pépinière",           color:"#06B6D4", bg:"rgba(6,182,212,0.1)", max:null },
+  { key:"occasionnel", label:"Occasionnel",         color:"#F59E0B", bg:"rgba(245,158,11,0.1)",max:null },
+];
+
+const FONCTIONS_TITULAIRES = [
+  "Conducteur dépalettiseur",
+  "Conducteur décaisseuse",
+  "Conducteur laveuse",
+  "Conducteur EBI/Mireuse",
+  "Conducteur soutireuse",
+  "Conducteur pasteurisateur",
+  "Conducteur étiquetteuse",
+  "Assistant conducteur étiquetteuse",
+  "Conducteur encaisseuse",
+  "Conducteur palettiseur",
+  "Cariste 1","Cariste 2","Cariste 3","Cariste 4",
+];
+
+// ── ICÔNES SVG ────────────────────────────────────────────
+const IconUsers  = ({size=28,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>;
+const IconDB     = ({size=28,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 3C7.58 3 4 4.79 4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7c0-2.21-3.58-4-8-4zm0 2c3.87 0 6 1.5 6 2s-2.13 2-6 2-6-1.5-6-2 2.13-2 6-2zm0 14c-3.87 0-6-1.5-6-2v-2.23C7.61 15.56 9.72 16 12 16s4.39-.44 6-1.23V17c0 .5-2.13 2-6 2zm0-4c-3.87 0-6-1.5-6-2V9.77C7.61 10.56 9.72 11 12 11s4.39-.44 6-1.23V13c0 .5-2.13 2-6 2z"/></svg>;
+const IconLogs   = ({size=28,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>;
+const IconStats  = ({size=28,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>;
+const IconTeam   = ({size=28,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>;
+const IconBack   = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>;
+const IconShield = ({size=32,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>;
+const IconEdit   = ({size=16,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>;
+const IconDelete = ({size=16,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>;
+const IconAdd    = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>;
+const IconSearch = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>;
+const IconRefresh= ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>;
+const IconExport = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>;
+
+// ── PAGE ACCUEIL ADMIN ────────────────────────────────────
+function AccueilAdmin({ setPage }) {
+  const { T } = useTheme();
+  const cards = [
+    { id:"users",     icon:<IconUsers size={36} color="#DA291C"/>, title:"Utilisateurs",   desc:"Créer, modifier, supprimer les comptes",              color:"#DA291C", bg:"rgba(218,41,28,0.08)" },
+    { id:"equipes",   icon:<IconTeam  size={36} color="#10B981"/>, title:"Équipes",         desc:"Gérer les équipes et membres titulaires",             color:"#10B981", bg:"rgba(16,185,129,0.08)" },
+    { id:"pointages", icon:<svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14H7v-2h3v2zm0-4H7v-2h3v2zm0-4H7V7h3v2zm7 8h-5v-2h5v2zm0-4h-5v-2h5v2zm0-4h-5V7h5v2z" fill="#DA291C"/></svg>, title:"Pointages", desc:"Fiches présence, heures supp, rapport AB", color:"#DA291C", bg:"rgba(218,41,28,0.08)" },
+    { id:"base",      icon:<IconDB    size={36} color="#3B82F6"/>, title:"Interrogation",   desc:"Rechercher dans les relevés énergie et qualité",      color:"#3B82F6", bg:"rgba(59,130,246,0.08)" },
+    { id:"logs",      icon:<IconLogs  size={36} color="#8B5CF6"/>, title:"Logs d'activité", desc:"Historique des actions utilisateurs",                 color:"#8B5CF6", bg:"rgba(139,92,246,0.08)" },
+    { id:"stats",     icon:<IconStats size={36} color="#F5A623"/>, title:"Statistiques",    desc:"Vue globale de la base de données",                   color:"#F5A623", bg:"rgba(245,166,35,0.08)" },
+  ];
+  return (
+    <div style={{ padding:'24px 16px', maxWidth:600, margin:'0 auto' }}>
+      <div style={{ marginBottom:32 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
+          <div style={{ width:44, height:44, borderRadius:14, background:'rgba(218,41,28,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <IconShield size={24} color="#DA291C"/>
+          </div>
+          <div>
+            <h1 style={{ fontSize:22, fontWeight:700, color:T.text, margin:0 }}>Administration</h1>
+            <p style={{ fontSize:13, color:T.textSoft, margin:0 }}>Gestion de la plateforme</p>
+          </div>
+        </div>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {cards.map(card => (
+          <button key={card.id} onClick={() => setPage(card.id)} style={{
+            background:T.card, border:`1px solid ${T.border}`, borderRadius:20, padding:'24px 20px',
+            cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:18,
+            transition:'all 0.2s', boxShadow:'0 2px 8px rgba(0,0,0,0.06)',
+          }}
+            onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
+            onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
+          >
+            <div style={{ width:64, height:64, borderRadius:18, background:card.bg, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {card.icon}
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:18, fontWeight:700, color:card.color, margin:'0 0 4px' }}>{card.title}</p>
+              <p style={{ fontSize:14, color:T.textSoft, margin:0 }}>{card.desc}</p>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18l6-6-6-6" stroke={T.textSoft} strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── HEADER SOUS-PAGE ──────────────────────────────────────
+function SousPageHeader({ titre, setPage, T }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, paddingBottom:16, borderBottom:`1px solid ${T.border}` }}>
+      <button onClick={() => setPage("accueil")} style={{
+        background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:10,
+        width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center',
+        cursor:'pointer', flexShrink:0,
+      }}>
+        <IconBack size={18} color={T.textSoft}/>
+      </button>
+      <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:0 }}>{titre}</p>
+    </div>
+  );
+}
+
+// ── ADMINISTRATION PRINCIPALE ─────────────────────────────
+export default function Administration() {
+  const { T, dark } = useTheme();
+  const [page, setPage] = useState("accueil");
+  return (
+    <div style={{ padding:'20px 16px', maxWidth:1000, margin:'0 auto' }}>
+      {page === "accueil"   && <AccueilAdmin  setPage={setPage}/>}
+      {page === "users"     && <OngletUsers   T={T} dark={dark} setPage={setPage}/>}
+      {page === "equipes"   && <OngletEquipes T={T} dark={dark} setPage={setPage}/>}
+      {page === "pointages" && <OngletPointages T={T} dark={dark} setPage={setPage}/>}
+      {page === "base"      && <OngletBase    T={T} dark={dark} setPage={setPage}/>}
+      {page === "logs"      && <OngletLogs    T={T} dark={dark} setPage={setPage}/>}
+      {page === "stats"     && <OngletStats   T={T} dark={dark} setPage={setPage}/>}
+    </div>
+  );
+}
+
+// ── ONGLET UTILISATEURS ───────────────────────────────────
+function OngletUsers({ T, dark, setPage }) {
+  const [users,   setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal,   setModal]   = useState(null);
+  const [form,    setForm]    = useState({ username:"", password:"", role:"operateur" });
+  const [erreur,  setErreur]  = useState(null);
+  const [succes,  setSucces]  = useState(null);
+
+  useEffect(() => { charger(); }, []);
+
+  async function charger() {
+    setLoading(true);
+    try { const res = await api.get("/auth/users"); setUsers(res.data); }
+    catch(e) { setErreur("Erreur chargement utilisateurs"); }
+    setLoading(false);
+  }
+
+  function ouvrirCreer() { setForm({ username:"", password:"", role:"operateur" }); setErreur(null); setSucces(null); setModal("create"); }
+  function ouvrirModifier(user) { setForm({ username:user.username, password:"", role:user.role, actif:user.actif }); setErreur(null); setSucces(null); setModal(user); }
+
+  async function sauvegarder() {
+    setErreur(null);
+    try {
+      if(modal === "create") {
+        if(!form.username || !form.password) { setErreur("Tous les champs sont requis"); return; }
+        await api.post("/auth/users", { username:form.username, password:form.password, role:form.role });
+        setSucces(`Utilisateur "${form.username}" créé`);
+      } else {
+        const payload = { role:form.role, actif:form.actif };
+        if(form.password) payload.password = form.password;
+        await api.put(`/auth/users/${modal.id}`, payload);
+        setSucces(`Utilisateur "${modal.username}" modifié`);
+      }
+      setModal(null); charger();
+    } catch(e) { setErreur(e.response?.data?.detail || "Erreur"); }
+  }
+
+  async function supprimer(user) {
+    if(!window.confirm(`Supprimer "${user.username}" ?`)) return;
+    try { await api.delete(`/auth/users/${user.id}`); setSucces(`Utilisateur "${user.username}" supprimé`); charger(); }
+    catch(e) { setErreur(e.response?.data?.detail || "Erreur suppression"); }
+  }
+
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  return (
+    <div>
+      <SousPageHeader titre="Gestion des utilisateurs" setPage={setPage} T={T}/>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <p style={{ fontSize:13, color:T.textSoft, margin:0 }}>{users.length} utilisateur(s)</p>
+        <button onClick={ouvrirCreer} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'9px 16px', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          <IconAdd size={16} color="#fff"/> Nouvel utilisateur
+        </button>
+      </div>
+      {succes && <div style={{ background:'#F0FDF4', border:'1px solid #86EFAC', borderRadius:10, padding:'10px 14px', color:'#166534', fontSize:13, marginBottom:12 }}>{succes}</div>}
+      {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:10, padding:'10px 14px', color:'#B91C1C', fontSize:13, marginBottom:12 }}>{erreur}</div>}
+      {loading ? <div style={{ textAlign:'center', padding:40, color:T.textSoft }}>Chargement...</div> : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {users.map(u => (
+            <div key={u.id} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+              <div style={{ width:40, height:40, borderRadius:'50%', background:`${ROLE_COLORS[u.role]}22`, border:`2px solid ${ROLE_COLORS[u.role]}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color:ROLE_COLORS[u.role], flexShrink:0 }}>
+                {u.username[0].toUpperCase()}
+              </div>
+              <div style={{ flex:1, minWidth:120 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:14, fontWeight:700, color:T.text }}>{u.username}</span>
+                  {!u.actif && <span style={{ fontSize:10, color:'#EF4444', background:'#FEF2F2', padding:'2px 8px', borderRadius:20, fontWeight:600 }}>Inactif</span>}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:3 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color:ROLE_COLORS[u.role], background:`${ROLE_COLORS[u.role]}18`, padding:'2px 8px', borderRadius:20 }}>{ROLE_LABELS[u.role] || u.role}</span>
+                  {u.last_login && <span style={{ fontSize:10, color:T.textMuted }}>Dernière connexion : {new Date(u.last_login).toLocaleDateString('fr-FR')}</span>}
+                </div>
+              </div>
+              {u.username !== 'admin' ? (
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => ouvrirModifier(u)} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:8, padding:'7px 12px', fontSize:12, fontWeight:600, color:T.text, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
+                    <IconEdit size={14} color={T.textSoft}/> Modifier
+                  </button>
+                  <button onClick={() => supprimer(u)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'7px 12px', fontSize:12, fontWeight:600, color:'#B91C1C', cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
+                    <IconDelete size={14} color="#B91C1C"/> Supprimer
+                  </button>
+                </div>
+              ) : <span style={{ fontSize:11, color:T.textMuted, fontStyle:'italic' }}>Protégé</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {modal !== null && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+          <div style={{ background:T.card, borderRadius:16, padding:24, width:'100%', maxWidth:420, border:`1px solid ${T.border}` }}>
+            <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:'0 0 20px' }}>{modal === "create" ? "Nouvel utilisateur" : `Modifier ${modal.username}`}</p>
+            {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:8, padding:'8px 12px', color:'#B91C1C', fontSize:12, marginBottom:12 }}>{erreur}</div>}
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {modal === "create" && <div><label style={LS}>Nom d'utilisateur</label><input value={form.username} onChange={e=>setForm({...form,username:e.target.value})} style={IS} placeholder="ex: operateur3"/></div>}
+              <div><label style={LS}>{modal === "create" ? "Mot de passe" : "Nouveau mot de passe (vide = inchangé)"}</label><input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} style={IS} placeholder="••••••••"/></div>
+              <div><label style={LS}>Rôle</label><select value={form.role} onChange={e=>setForm({...form,role:e.target.value})} style={IS}>{ROLES.map(r=><option key={r} value={r}>{ROLE_LABELS[r]}</option>)}</select></div>
+              {modal !== "create" && <div style={{ display:'flex', alignItems:'center', gap:10 }}><input type="checkbox" id="actif" checked={form.actif} onChange={e=>setForm({...form,actif:e.target.checked})} style={{ width:16, height:16 }}/><label htmlFor="actif" style={{ fontSize:13, color:T.text, cursor:'pointer' }}>Compte actif</label></div>}
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:20 }}>
+              <button onClick={sauvegarder} style={{ flex:1, background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px', fontSize:14, fontWeight:700, cursor:'pointer' }}>{modal === "create" ? "Créer" : "Enregistrer"}</button>
+              <button onClick={() => { setModal(null); setErreur(null); }} style={{ flex:1, background:T.borderSoft, color:T.text, border:`1px solid ${T.border}`, borderRadius:10, padding:'10px', fontSize:14, cursor:'pointer' }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ONGLET ÉQUIPES ────────────────────────────────────────
+function OngletEquipes({ T, dark, setPage }) {
+  const [equipes,  setEquipes]  = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [modalEq,  setModalEq]  = useState(null);
+  const [modalMb,  setModalMb]  = useState(null);
+  const [formEq,   setFormEq]   = useState({ nom:'', chaine:'Chaîne 8' });
+  const [formMb,   setFormMb]   = useState({ fonction:'', nom_prenom:'', matricule:'', statut:'titulaire', ordre:0 });
+  const [erreur,   setErreur]   = useState(null);
+  const [succes,   setSucces]   = useState(null);
+
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  useEffect(() => { charger(); }, []);
+
+  useEffect(() => {
+    if(selected && equipes.length > 0) {
+      const updated = equipes.find(e => e.id === selected.id);
+      if(updated) setSelected(updated);
+    }
+  }, [equipes]);
+
+  async function charger() {
+    setLoading(true);
+    try {
+      const res = await equipesAPI.lister();
+      setEquipes(res.data);
+      if(res.data.length > 0 && !selected) setSelected(res.data[0]);
+    } catch(e) { setErreur("Erreur chargement"); }
+    setLoading(false);
+  }
+
+  async function sauvegarderEquipe() {
+    setErreur(null);
+    try {
+      if(modalEq === "create") { await equipesAPI.creer(formEq); setSucces(`Équipe "${formEq.nom}" créée`); }
+      else { await equipesAPI.modifier(modalEq.id, formEq); setSucces("Équipe modifiée"); }
+      setModalEq(null); charger();
+    } catch(e) { setErreur(e.response?.data?.detail || "Erreur"); }
+  }
+
+  async function supprimerEquipe(eq) {
+    if(!window.confirm(`Supprimer "${eq.nom}" ?`)) return;
+    try { await equipesAPI.supprimer(eq.id); setSucces("Équipe supprimée"); setSelected(null); charger(); }
+    catch(e) { setErreur(e.response?.data?.detail || "Erreur"); }
+  }
+
+  async function sauvegarderMembre() {
+    setErreur(null);
+    if(!selected) return;
+    const estAM = FONCTIONS_AM.includes(formMb.fonction);
+    const statutFinal = estAM ? 'am' : 'titulaire';
+    try {
+      if(modalMb === "create") {
+        await equipesAPI.ajouterMembre(selected.id, { ...formMb, statut: statutFinal, ordre: selected.membres.length });
+        setSucces(`Membre "${formMb.nom_prenom}" ajouté`);
+      } else {
+        await equipesAPI.modifierMembre(selected.id, modalMb.id, { ...formMb, statut: statutFinal });
+        setSucces("Membre modifié");
+      }
+      setModalMb(null); charger();
+    } catch(e) { setErreur(e.response?.data?.detail || "Erreur"); }
+  }
+
+  async function supprimerMembre(mb) {
+    try { await equipesAPI.supprimerMembre(selected.id, mb.id); setSucces("Membre retiré"); charger(); }
+    catch(e) { setErreur(e.response?.data?.detail || "Erreur suppression"); }
+  }
+
+  const membresTries = selected
+    ? [...selected.membres].filter(m => m.actif !== false).sort((a,b) => a.ordre - b.ordre)
+    : [];
+  const membresAM     = membresTries.filter(m => FONCTIONS_AM.includes(m.fonction));
+  const membresTit    = membresTries.filter(m => !FONCTIONS_AM.includes(m.fonction));
+
+  return (
+    <div>
+      <SousPageHeader titre="Gestion des équipes" setPage={setPage} T={T}/>
+      {succes && <div style={{ background:'#F0FDF4', border:'1px solid #86EFAC', borderRadius:10, padding:'10px 14px', color:'#166534', fontSize:13, marginBottom:12 }}>{succes}</div>}
+      {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:10, padding:'10px 14px', color:'#B91C1C', fontSize:13, marginBottom:12 }}>{erreur}</div>}
+
+      <div style={{ display:'grid', gridTemplateColumns:'250px 1fr', gap:16 }}>
+        {/* Liste équipes */}
+        <div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:T.text, margin:0 }}>{equipes.length} équipe(s)</p>
+            <button onClick={() => { setFormEq({nom:'',chaine:'Chaîne 8'}); setModalEq("create"); }} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>+ Créer</button>
+          </div>
+          {loading ? <div style={{ textAlign:'center', padding:20, color:T.textSoft }}>Chargement...</div> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {equipes.map(eq => (
+                <button key={eq.id} onClick={() => setSelected(eq)} style={{
+                  background: selected?.id===eq.id ? T.primary+'22' : T.card,
+                  border:`1px solid ${selected?.id===eq.id ? T.primary : T.border}`,
+                  borderRadius:10, padding:'10px 12px', cursor:'pointer', textAlign:'left',
+                  display:'flex', flexDirection:'column', gap:3,
+                }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:selected?.id===eq.id?T.primary:T.text }}>{eq.nom}</span>
+                  <span style={{ fontSize:11, color:T.textSoft }}>{eq.chaine} · {eq.membres.length} membres</span>
+                </button>
+              ))}
+              {equipes.length === 0 && <p style={{ fontSize:12, color:T.textSoft, textAlign:'center', padding:20 }}>Aucune équipe. Créez-en une.</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Détail équipe */}
+        <div>
+          {selected ? (
+            <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:20 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <div>
+                  <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:'0 0 4px' }}>{selected.nom}</p>
+                  <p style={{ fontSize:12, color:T.textSoft, margin:0 }}>
+                    {selected.chaine} ·{' '}
+                    <span style={{ color:'#F97316', fontWeight:700 }}>{membresAM.length} AM</span>
+                    {' · '}
+                    <span style={{ color:'#3B82F6', fontWeight:700 }}>{membresTit.length}/14 titulaires</span>
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => { setFormEq({nom:selected.nom,chaine:selected.chaine}); setModalEq(selected); }} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:600, color:T.text, cursor:'pointer' }}>Modifier</button>
+                  <button onClick={() => supprimerEquipe(selected)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:600, color:'#B91C1C', cursor:'pointer' }}>Supprimer</button>
+                </div>
+              </div>
+
+              {/* Tableau membres AM en premier */}
+              {membresAM.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <span style={{ fontSize:12, fontWeight:700, color:'#F97316', background:'rgba(249,115,22,0.1)', padding:'3px 10px', borderRadius:20 }}>
+                      Agents de maîtrise ({membresAM.length})
+                    </span>
+                  </div>
+                  <div style={{ overflowX:'auto' }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+                      <thead>
+                        <tr style={{ background:dark?'#1E293B':'#FFF7ED' }}>
+                          {["#","Nom et Prénom","Matricule","Actions"].map(h => (
+                            <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:'#F97316', fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid #F97316` }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {membresAM.map((m,i) => (
+                          <tr key={m.id} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':'rgba(249,115,22,0.03)' }}>
+                            <td style={{ padding:'8px 10px', color:T.textMuted }}>{i+1}</td>
+                            <td style={{ padding:'8px 10px', fontWeight:700 }}>{m.nom_prenom} <span style={{ fontSize:10, color:'#F97316', marginLeft:4 }}>{m.matricule||''}</span></td>
+                            <td style={{ padding:'8px 10px', color:T.textSoft }}>{m.matricule||'—'}</td>
+                            <td style={{ padding:'8px 10px' }}>
+                              <div style={{ display:'flex', gap:6 }}>
+                                <button onClick={() => { setFormMb({fonction:m.fonction,nom_prenom:m.nom_prenom,matricule:m.matricule||'',statut:m.statut,ordre:m.ordre}); setModalMb(m); }} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:600, color:T.text, cursor:'pointer' }}>Modifier</button>
+                                <button onClick={() => supprimerMembre(m)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:600, color:'#B91C1C', cursor:'pointer' }}>Retirer</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Tableau membres titulaires */}
+              <div style={{ marginBottom:12 }}>
+                {membresTit.length > 0 && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <span style={{ fontSize:12, fontWeight:700, color:'#3B82F6', background:'rgba(59,130,246,0.1)', padding:'3px 10px', borderRadius:20 }}>
+                      Personnel titulaire ({membresTit.length}/14)
+                    </span>
+                  </div>
+                )}
+                <div style={{ overflowX:'auto' }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+                    <thead>
+                      <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+                        {["#","Fonction","Nom et Prénom","Matricule","Actions"].map(h => (
+                          <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {membresTit.map((m,i) => (
+                        <tr key={m.id} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)' }}>
+                          <td style={{ padding:'8px 10px', color:T.textMuted }}>{i+1}</td>
+                          <td style={{ padding:'8px 10px', fontWeight:500 }}>{m.fonction}</td>
+                          <td style={{ padding:'8px 10px', fontWeight:600 }}>{m.nom_prenom}</td>
+                          <td style={{ padding:'8px 10px', color:T.textSoft }}>{m.matricule||'—'}</td>
+                          <td style={{ padding:'8px 10px' }}>
+                            <div style={{ display:'flex', gap:6 }}>
+                              <button onClick={() => { setFormMb({fonction:m.fonction,nom_prenom:m.nom_prenom,matricule:m.matricule||'',statut:m.statut,ordre:m.ordre}); setModalMb(m); }} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:600, color:T.text, cursor:'pointer' }}>Modifier</button>
+                              <button onClick={() => supprimerMembre(m)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:6, padding:'4px 8px', fontSize:11, fontWeight:600, color:'#B91C1C', cursor:'pointer' }}>Retirer</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Boutons ajouter */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:12 }}>
+                {/* Titulaires */}
+                {membresTit.length < 14 && (
+                  <button onClick={() => {
+                    setFormMb({ fonction:FONCTIONS_TITULAIRES[membresTit.length]||"", nom_prenom:'', matricule:'', statut:'titulaire', ordre:membresTries.length });
+                    setModalMb("create");
+                  }} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 14px', fontSize:12, fontWeight:600, color:T.text, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
+                    <IconAdd size={14} color={T.textSoft}/> Titulaire ({membresTit.length}/14)
+                  </button>
+                )}
+
+                {/* Catégories spéciales */}
+                {CATEGORIES_SPECIALES.map(cat => {
+                  const count = membresTries.filter(m => m.statut === cat.key).length;
+                  if(cat.max && count >= cat.max) return null;
+                  return (
+                    <button key={cat.key} onClick={() => {
+                      setFormMb({ fonction:cat.key==='am'?'Agent de maîtrise':'', nom_prenom:'', matricule:'', statut:cat.key, ordre:membresTries.length });
+                      setModalMb("create");
+                    }} style={{
+                      background:cat.bg, border:`1px solid ${cat.color}`,
+                      borderRadius:10, padding:'8px 14px', fontSize:12,
+                      fontWeight:600, color:cat.color, cursor:'pointer',
+                      display:'flex', alignItems:'center', gap:5,
+                    }}>
+                      <IconAdd size={14} color={cat.color}/> {cat.label} ({count}{cat.max?` · max ${cat.max}`:""})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:'40px 20px', textAlign:'center' }}>
+              <p style={{ fontSize:13, color:T.textSoft }}>Sélectionnez une équipe pour voir ses membres</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal équipe */}
+      {modalEq !== null && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+          <div style={{ background:T.card, borderRadius:16, padding:24, width:'100%', maxWidth:400, border:`1px solid ${T.border}` }}>
+            <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:'0 0 20px' }}>{modalEq === "create" ? "Nouvelle équipe" : `Modifier ${modalEq.nom}`}</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div><label style={LS}>Nom de l'équipe</label><input value={formEq.nom} onChange={e=>setFormEq({...formEq,nom:e.target.value})} style={IS} placeholder="ex: Équipe ENGOLO"/></div>
+              <div><label style={LS}>Chaîne</label><select value={formEq.chaine} onChange={e=>setFormEq({...formEq,chaine:e.target.value})} style={IS}>{CHAINES.map(c=><option key={c}>{c}</option>)}</select></div>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:20 }}>
+              <button onClick={sauvegarderEquipe} style={{ flex:1, background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px', fontSize:14, fontWeight:700, cursor:'pointer' }}>{modalEq === "create" ? "Créer" : "Enregistrer"}</button>
+              <button onClick={() => setModalEq(null)} style={{ flex:1, background:T.borderSoft, color:T.text, border:`1px solid ${T.border}`, borderRadius:10, padding:'10px', fontSize:14, cursor:'pointer' }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal membre */}
+      {modalMb !== null && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+          <div style={{ background:T.card, borderRadius:16, padding:24, width:'100%', maxWidth:440, border:`1px solid ${T.border}` }}>
+            <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:'0 0 20px' }}>{modalMb === "create" ? "Ajouter un membre" : `Modifier ${modalMb.nom_prenom}`}</p>
+            {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:8, padding:'8px 12px', color:'#B91C1C', fontSize:12, marginBottom:12 }}>{erreur}</div>}
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+
+              <div>
+                <label style={LS}>Catégorie</label>
+                <select value={formMb.statut} onChange={e => {
+                  const cat = e.target.value;
+                  setFormMb({...formMb, statut:cat,
+                    fonction: cat==='titulaire' ? '' : cat==='am' ? 'Agent de maîtrise' : ''
+                  });
+                }} style={IS}>
+                  <option value="titulaire">Personnel titulaire</option>
+                  {CATEGORIES_SPECIALES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </div>
+
+              {formMb.statut === 'titulaire' && (
+                <div>
+                  <label style={LS}>Fonction</label>
+                  <select value={formMb.fonction} onChange={e=>setFormMb({...formMb,fonction:e.target.value})} style={IS}>
+                    <option value="">-- Sélectionner --</option>
+                    {FONCTIONS_TITULAIRES.map(f=><option key={f}>{f}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {['prestataire','pepiniere','occasionnel'].includes(formMb.statut) && (
+                <div>
+                  <label style={LS}>Fonction / Poste</label>
+                  <input value={formMb.fonction} onChange={e=>setFormMb({...formMb,fonction:e.target.value})} style={IS} placeholder="ex: Opérateur ligne, Manutentionnaire..."/>
+                </div>
+              )}
+
+              {formMb.statut !== 'titulaire' && formMb.statut && (
+                <div style={{
+                  background: CATEGORIES_SPECIALES.find(c=>c.key===formMb.statut)?.bg,
+                  border: `1px solid ${CATEGORIES_SPECIALES.find(c=>c.key===formMb.statut)?.color}`,
+                  borderRadius:8, padding:'8px 12px', fontSize:12,
+                  color: CATEGORIES_SPECIALES.find(c=>c.key===formMb.statut)?.color,
+                }}>
+                  {formMb.statut === 'am'          && "Agent de maîtrise — exporté dans le fichier Excel AM séparé."}
+                  {formMb.statut === 'prestataire' && "Prestataire — fichier Excel séparé à venir."}
+                  {formMb.statut === 'pepiniere'   && "Pépinière — fichier Excel séparé à venir."}
+                  {formMb.statut === 'occasionnel' && "Occasionnel — géré par l'administrateur."}
+                </div>
+                )}
+
+              
+              <div><label style={LS}>Nom et Prénom</label><input value={formMb.nom_prenom} onChange={e=>setFormMb({...formMb,nom_prenom:e.target.value})} style={IS} placeholder="ex: MBABWE EDGARD"/></div>
+              <div><label style={LS}>Matricule</label><input value={formMb.matricule} onChange={e=>setFormMb({...formMb,matricule:e.target.value})} style={IS} placeholder="ex: 116084"/></div>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:20 }}>
+              <button onClick={sauvegarderMembre} style={{ flex:1, background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px', fontSize:14, fontWeight:700, cursor:'pointer' }}>{modalMb === "create" ? "Ajouter" : "Enregistrer"}</button>
+              <button onClick={() => { setModalMb(null); setErreur(null); }} style={{ flex:1, background:T.borderSoft, color:T.text, border:`1px solid ${T.border}`, borderRadius:10, padding:'10px', fontSize:14, cursor:'pointer' }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ONGLET POINTAGES ──────────────────────────────────────
+function OngletPointages({ T, dark, setPage }) {
+  const [sousOnglet, setSousOnglet] = useState("semaine");
+  const [chaine,     setChaine]     = useState("Chaîne 8");
+  const [equipeId,   setEquipeId]   = useState("");
+  const [equipes,    setEquipes]    = useState([]);
+  const [dateLundi,  setDateLundi]  = useState("");
+  const [pointages,  setPointages]  = useState([]);
+  const [typeFiche,  setTypeFiche]  = useState("titulaires");
+  const [loading,    setLoading]    = useState(false);
+  const [loadingExp, setLoadingExp] = useState(false);
+  const [erreur,     setErreur]     = useState(null);
+  const tableauRef = useRef(null);
+
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  useEffect(() => {
+    setEquipeId(""); setPointages([]);
+    equipesAPI.lister({ chaine }).then(res => setEquipes(res.data)).catch(console.error);
+  }, [chaine]);
+
+  useEffect(() => {
+    const d = new Date(); const jour = d.getDay();
+    const diff = jour === 0 ? -6 : 1 - jour;
+    d.setDate(d.getDate() + diff);
+    setDateLundi(d.toISOString().split("T")[0]);
+  }, []);
+
+  function getDimanche(lundi) {
+    if(!lundi) return "";
+    const d = new Date(lundi); d.setDate(d.getDate() + 6);
+    return d.toISOString().split("T")[0];
+  }
+
+  function handleDateChange(val) {
+    const d = new Date(val); const jour = d.getDay();
+    const diff = jour === 0 ? -6 : 1 - jour;
+    d.setDate(d.getDate() + diff);
+    setDateLundi(d.toISOString().split("T")[0]); setPointages([]);
+  }
+
+  async function chargerPointages() {
+    if(!equipeId)  { setErreur("Sélectionnez une équipe."); return; }
+    if(!dateLundi) { setErreur("Sélectionnez une semaine."); return; }
+    setErreur(null); setLoading(true);
+    try {
+      const dimanche = getDimanche(dateLundi);
+      const res = await pointagesAPI.lister({ equipe_id:equipeId, date_debut:dateLundi, date_fin:dimanche });
+      setPointages(res.data);
+      if(res.data.length === 0) setErreur("Aucun pointage trouvé pour cette semaine.");
+    } catch(e) { setErreur("Erreur lors du chargement."); }
+    setLoading(false);
+  }
+
+  async function exporterExcel() {
+    if(!equipeId || !dateLundi) { setErreur("Sélectionnez une équipe et une semaine."); return; }
+    setErreur(null); setLoadingExp(true);
+    try {
+      const res = await pointagesAPI.exportExcel({ equipe_id:equipeId, date_lundi:dateLundi });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const eq = equipes.find(e => e.id === parseInt(equipeId));
+      link.setAttribute("download", `Pointage_${eq?.nom}_${chaine.replace(/\s/g,"_")}_${dateLundi}.xlsx`);
+      document.body.appendChild(link); link.click(); link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch(e) { setErreur("Erreur lors de l'export."); console.error(e); }
+    setLoadingExp(false);
+  }
+
+  async function exporterExcelAM() {
+    if(!equipeId || !dateLundi) { setErreur("Sélectionnez une équipe et une semaine."); return; }
+    setErreur(null); setLoadingExp(true);
+    try {
+      const res = await pointagesAPI.exportExcelAM({ equipe_id:equipeId, date_lundi:dateLundi });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const eq = equipes.find(e => e.id === parseInt(equipeId));
+      link.setAttribute("download", `Pointage_AM_${eq?.nom}_${chaine.replace(/\s/g,"_")}_${dateLundi}.xlsx`);
+      document.body.appendChild(link); link.click(); link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch(e) { setErreur("Erreur lors de l'export AM."); console.error(e); }
+    setLoadingExp(false);
+  }
+
+  async function exporterPDF() {
+    if(!equipeId || !dateLundi) { setErreur("Sélectionnez une équipe et une semaine."); return; }
+    if(pointages.length === 0)  { setErreur("Chargez d'abord les pointages."); return; }
+    const element = tableauRef.current;
+    if(!element) return;
+    const canvas = await html2canvas(element, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a3' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pdfW/canvas.width, pdfH/canvas.height);
+    pdf.addImage(imgData,'PNG',(pdfW-canvas.width*ratio)/2,(pdfH-canvas.height*ratio)/2,canvas.width*ratio,canvas.height*ratio);
+    const eq = equipes.find(e => e.id === parseInt(equipeId));
+    pdf.save(`Pointage_${eq?.nom}_${dateLundi}.pdf`);
+  }
+
+  const dimanche = getDimanche(dateLundi);
+  const eq       = equipes.find(e => e.id === parseInt(equipeId));
+  const jours    = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+  const resumeParJour = dateLundi ? jours.map((jour, i) => {
+    const d = new Date(dateLundi); d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    const ptg = pointages.find(p => p.date === dateStr);
+    return { jour, date: dateStr, ptg };
+  }) : [];
+
+  // Filtrer les lignes selon le type de fiche
+  function filtrerLignes(lignes) {
+    if(!lignes) return [];
+    return lignes.filter(l => {
+      if(l.est_occasionnel) return false;
+      const estAM = FONCTIONS_AM.includes(l.fonction);
+      return typeFiche === 'am' ? estAM : !estAM;
+    });
+  }
+
+  return (
+    <div>
+      <SousPageHeader titre="Pointages" setPage={setPage} T={T}/>
+
+      {/* Sous-onglets */}
+      <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
+        {[
+          { key:"semaine",     label:"Fiche hebdomadaire" },
+          { key:"rapport",     label:"Rapport AB" },
+          { key:"heures_supp", label:"Heures Supplémentaires" },
+        ].map(o => (
+          <button key={o.key} onClick={() => setSousOnglet(o.key)} style={{
+            padding:'8px 18px', borderRadius:10, border:'none', cursor:'pointer',
+            fontSize:13, fontWeight:sousOnglet===o.key?700:500,
+            background:sousOnglet===o.key?T.primary:T.borderSoft,
+            color:sousOnglet===o.key?'#fff':T.textSoft,
+          }}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── SOUS-ONGLET SEMAINE ── */}
+      {sousOnglet === "semaine" && (
+        <div>
+          <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:16, padding:20, marginBottom:20 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
+              <div>
+                <label style={LS}>Chaîne</label>
+                <select value={chaine} onChange={e => setChaine(e.target.value)} style={IS}>
+                  {CHAINES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={LS}>Équipe</label>
+                <select value={equipeId} onChange={e => { setEquipeId(e.target.value); setPointages([]); }} style={IS}>
+                  <option value="">-- Sélectionner --</option>
+                  {equipes.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={LS}>Semaine</label>
+                <input type="date" value={dateLundi} onChange={e => handleDateChange(e.target.value)} style={IS}/>
+              </div>
+              <div>
+                <label style={LS}>Type de fiche</label>
+                <select value={typeFiche} onChange={e => setTypeFiche(e.target.value)} style={IS}>
+                  <option value="titulaires">Personnel titulaire</option>
+                  <option value="am">Agents de maîtrise (AM)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Badge type fiche */}
+            <div style={{ marginBottom:12 }}>
+              {typeFiche === 'am' ? (
+                <span style={{ fontSize:12, fontWeight:700, color:'#F97316', background:'rgba(249,115,22,0.1)', padding:'4px 12px', borderRadius:20, border:'1px solid #F97316' }}>
+                  Mode : Agents de maîtrise — Export fichier AM
+                </span>
+              ) : (
+                <span style={{ fontSize:12, fontWeight:700, color:'#3B82F6', background:'rgba(59,130,246,0.1)', padding:'4px 12px', borderRadius:20, border:'1px solid #3B82F6' }}>
+                  Mode : Personnel titulaire — Export fichier standard
+                </span>
+              )}
+            </div>
+
+            {dateLundi && (
+              <div style={{ padding:'10px 14px', borderRadius:10, background:T.borderSoft, border:`1px solid ${T.border}`, fontSize:13, color:T.text, marginBottom:16 }}>
+                Semaine : <strong>{new Date(dateLundi).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</strong> au <strong>{new Date(dimanche).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</strong>
+                {eq && <> · Équipe : <strong>{eq.nom}</strong></>}
+              </div>
+            )}
+
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              <button onClick={chargerPointages} disabled={loading} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, opacity:loading?0.7:1 }}>
+                <IconSearch size={16} color="#fff"/>
+                {loading ? "Chargement..." : "Afficher la semaine"}
+              </button>
+
+              {/* Bouton export Excel selon le type */}
+              <button
+                onClick={typeFiche === 'am' ? exporterExcelAM : exporterExcel}
+                disabled={loadingExp||!equipeId||!dateLundi}
+                style={{
+                  background:(!equipeId||!dateLundi)?T.borderSoft:typeFiche==='am'?'#F97316':'#10B981',
+                  color:(!equipeId||!dateLundi)?T.textSoft:'#fff',
+                  border:`1px solid ${(!equipeId||!dateLundi)?T.border:typeFiche==='am'?'#F97316':'#10B981'}`,
+                  borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700,
+                  cursor:(!equipeId||!dateLundi)?'not-allowed':'pointer',
+                  display:'flex', alignItems:'center', gap:6, opacity:loadingExp?0.7:1,
+                }}
+              >
+                <IconExport size={16} color={(!equipeId||!dateLundi)?T.textSoft:'#fff'}/>
+                {loadingExp ? "Export..." : typeFiche==='am' ? "Exporter Excel AM" : "Exporter Excel"}
+              </button>
+
+              <button onClick={exporterPDF} disabled={pointages.length===0} style={{
+                background:pointages.length===0?T.borderSoft:'#DA291C',
+                color:pointages.length===0?T.textSoft:'#fff',
+                border:`1px solid ${pointages.length===0?T.border:'#DA291C'}`,
+                borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700,
+                cursor:pointages.length===0?'not-allowed':'pointer',
+                display:'flex', alignItems:'center', gap:6,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={pointages.length===0?T.textSoft:'white'}><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
+                Exporter PDF
+              </button>
+            </div>
+          </div>
+
+          {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 16px', color:'#B91C1C', fontSize:13, marginBottom:16 }}>{erreur}</div>}
+
+          {pointages.length > 0 && (
+            <div ref={tableauRef}>
+              {/* Tableau récapitulatif semaine — un seul tableau */}
+              <div style={{ overflowX:'auto', background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:20 }}>
+
+                {/* En-tête info semaine */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
+                  <div>
+                    <p style={{ fontSize:14, fontWeight:700, color:T.text, margin:'0 0 4px' }}>
+                      {eq?.nom} · {chaine}
+                    </p>
+                    <p style={{ fontSize:12, color:T.textSoft, margin:0 }}>
+                      Semaine du {new Date(dateLundi).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} au {new Date(dimanche).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}
+                    </p>
+                  </div>
+                  <div style={{ display:'flex', gap:12 }}>
+                    {(() => {
+                      const toutesLignes = pointages.flatMap(p => filtrerLignes(p.lignes));
+                      const membres = [...new Map(toutesLignes.map(l => [l.membre_id||l.nom_prenom, l])).values()];
+                      const presentsTotal = toutesLignes.filter(l => l.presence==='P').length;
+                      const absentsTotal  = toutesLignes.filter(l => ['AB','AA','R','RM','CP'].includes(l.presence)).length;
+                      return (
+                        <>
+                          <span style={{ fontSize:12, color:'#10B981', fontWeight:700 }}>{membres.length} membres</span>
+                          <span style={{ fontSize:12, color:'#3B82F6', fontWeight:700 }}>{presentsTotal} présences</span>
+                          <span style={{ fontSize:12, color:'#EF4444', fontWeight:700 }}>{absentsTotal} absences/repos</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11, color:T.text }}>
+                  <thead>
+                    <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+                      <th style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:10, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}`, minWidth:30 }}>#</th>
+                      <th style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:10, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}`, minWidth:120 }}>Nom et Prénom</th>
+                      <th style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:10, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}`, minWidth:140 }}>Fonction</th>
+                      {resumeParJour.map(({ jour, date }) => (
+                        <th key={jour} style={{
+                          padding:'8px 6px', textAlign:'center', fontWeight:700,
+                          color:T.textSoft, fontSize:10, whiteSpace:'nowrap',
+                           borderBottom:`2px solid ${T.border}`, minWidth:60,
+                        }}>
+                          <div>{jour}</div>
+                          <div style={{ fontSize:9, fontWeight:400, color:T.textMuted }}>
+                            {new Date(date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      // Construire la liste unique des membres à afficher
+                      const toutesLignes = pointages.flatMap(p => filtrerLignes(p.lignes));
+                      const membresMap = new Map();
+                      toutesLignes.forEach(l => {
+                        const cle = l.membre_id || l.nom_prenom;
+                        if(!membresMap.has(cle)) membresMap.set(cle, { ...l });
+                      });
+                      const membres = [...membresMap.values()];
+
+                      // Pour chaque membre, trouver sa présence par jour
+                      return membres.map((m, i) => {
+                        const presenceParJour = resumeParJour.map(({ date }) => {
+                          const ptg = pointages.find(p => p.date === date);
+                          if(!ptg) return null;
+                          const lg = filtrerLignes(ptg.lignes).find(l =>
+                            l.membre_id ? l.membre_id === m.membre_id : l.nom_prenom === m.nom_prenom
+                          );
+                          return lg || null;
+                        });
+
+                        return (
+                          <tr key={i} style={{
+                            borderBottom:`1px solid ${T.border}`,
+                            background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)',
+                          }}>
+                            <td style={{ padding:'7px 10px', color:T.textMuted, fontSize:11 }}>{i+1}</td>
+                            <td style={{ padding:'7px 10px', fontWeight:700, fontSize:11, whiteSpace:'nowrap' }}>{m.nom_prenom}</td>
+                            <td style={{ padding:'7px 10px', fontSize:10, color:T.textSoft, whiteSpace:'nowrap' }}>{m.fonction}</td>
+                            {presenceParJour.map((lg, j) => (
+                              <td key={j} style={{ padding:'5px 6px', textAlign:'center' }}>
+                                {lg ? (
+                                  <span style={{
+                                    display:'inline-block',
+                                    fontSize:10, fontWeight:700,
+                                    padding:'2px 6px', borderRadius:6,
+                                    color: lg.presence==='P'  ? '#10B981'
+                                         : lg.presence==='AB' ? '#EF4444'
+                                         : lg.presence==='AA' ? '#F97316'
+                                         : lg.presence==='RM' ? '#8B5CF6'
+                                         : '#F59E0B',
+                                    background: lg.presence==='P'  ? 'rgba(16,185,129,0.1)'
+                                              : lg.presence==='AB' ? 'rgba(239,68,68,0.1)'
+                                              : lg.presence==='AA' ? 'rgba(249,115,22,0.1)'
+                                              : lg.presence==='RM' ? 'rgba(139,92,246,0.1)'
+                                              : 'rgba(245,158,11,0.1)',
+                                  }}>
+                                    {lg.presence==='P' ? `${lg.heures_N||''}h` : lg.presence}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize:10, color:T.borderSoft }}>—</span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── SOUS-ONGLET RAPPORT AB ── */}
+      {sousOnglet === "rapport" && <SectionRapportAB T={T} dark={dark}/>}
+
+      {/* ── SOUS-ONGLET HEURES SUPP ── */}
+      {sousOnglet === "heures_supp" && <SectionHeuresSupp T={T} dark={dark}/>}
+    </div>
+  );
+}
+
+// ── ONGLET INTERROGATION ──────────────────────────────────
+function OngletBase({ T, dark, setPage }) {
+  const [sousOnglet, setSousOnglet] = useState("energie");
+  const [atelier,    setAtelier]    = useState("");
+  const [quart,      setQuart]      = useState("");
+  const [dateDebut,  setDateDebut]  = useState("");
+  const [dateFin,    setDateFin]    = useState("");
+  const [resultats,  setResultats]  = useState([]);
+  const [loading,    setLoading]    = useState(false);
+  const [erreur,     setErreur]     = useState(null);
+
+  const ATELIERS = ["","Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
+  const QUARTS   = ["","22h-6h","6h-14h","14h-22h"];
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  async function rechercher() {
+    setErreur(null); setResultats([]); setLoading(true);
+    try {
+      const p = new URLSearchParams({ limit:200 });
+      if(atelier)   p.append("atelier",    atelier);
+      if(quart)     p.append("quart",      quart);
+      if(dateDebut) p.append("date_debut", dateDebut);
+      if(dateFin)   p.append("date_fin",   dateFin);
+      const url = sousOnglet==="energie" ? `/energie/?${p}` : `/qualite/?${p}`;
+      const res = await api.get(url);
+      setResultats(res.data);
+    } catch(e) { setErreur("Erreur lors de la recherche"); }
+    setLoading(false);
+  }
+
+  function exporterExcel() {
+    if(!resultats.length) return;
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(resultats);
+    ws["!cols"] = Object.keys(resultats[0]).map(()=>({ wch:16 }));
+    XLSX.utils.book_append_sheet(wb, ws, sousOnglet==="energie"?"Lean Énergie":"Qualité");
+    XLSX.writeFile(wb, `Interrogation_${sousOnglet}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  const colsEnergie = [
+    {key:"id",label:"ID"},{key:"date",label:"Date"},{key:"heure",label:"Heure"},{key:"quart",label:"Quart"},{key:"atelier",label:"Atelier"},
+    {key:"index_eau_rincage",label:"Eau rinç."},{key:"index_eau_bain",label:"Eau bain"},{key:"index_eau_pasteur",label:"Eau past."},
+    {key:"index_eau_aero",label:"Eau aéro"},{key:"index_elec",label:"Élec (kWh)"},{key:"index_co2",label:"CO₂ (kg)"},
+    {key:"production_hl",label:"Prod (hl)"},{key:"saisi_par",label:"Saisi par"},
+  ];
+  const colsQualite = [
+    {key:"id",label:"ID"},{key:"date",label:"Date"},{key:"heure",label:"Heure"},{key:"quart",label:"Quart"},{key:"atelier",label:"Atelier"},
+    {key:"brix",label:"Brix (°)"},{key:"co2_qualite",label:"CO₂ (g/L)"},{key:"bo2",label:"BO₂ (mg/L)"},{key:"saisi_par",label:"Saisi par"},
+  ];
+  const cols = sousOnglet==="energie" ? colsEnergie : colsQualite;
+
+  return (
+    <div>
+      <SousPageHeader titre="Interrogation base de données" setPage={setPage} T={T}/>
+      <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+        {["energie","qualite"].map(s=>(
+          <button key={s} onClick={()=>{ setSousOnglet(s); setResultats([]); }} style={{
+            padding:'7px 16px', borderRadius:8, border:'none', cursor:'pointer',
+            fontSize:12, fontWeight:sousOnglet===s?700:500,
+            background:sousOnglet===s?T.primary+'22':T.borderSoft,
+            color:sousOnglet===s?T.primary:T.textSoft,
+          }}>
+            {s==="energie" ? "Énergie" : "Qualité"}
+          </button>
+        ))}
+      </div>
+      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:16, marginBottom:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:12 }}>
+          <div><label style={LS}>Atelier</label><select value={atelier} onChange={e=>setAtelier(e.target.value)} style={IS}>{ATELIERS.map(a=><option key={a} value={a}>{a||"Tous"}</option>)}</select></div>
+          <div><label style={LS}>Quart</label><select value={quart} onChange={e=>setQuart(e.target.value)} style={IS}>{QUARTS.map(q=><option key={q} value={q}>{q||"Tous"}</option>)}</select></div>
+          <div><label style={LS}>Date début</label><input type="date" value={dateDebut} onChange={e=>setDateDebut(e.target.value)} style={IS}/></div>
+          <div><label style={LS}>Date fin</label><input type="date" value={dateFin} onChange={e=>setDateFin(e.target.value)} style={IS}/></div>
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={rechercher} disabled={loading} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+            <IconSearch size={16} color="#fff"/>{loading ? "Recherche..." : "Rechercher"}
+          </button>
+          {resultats.length > 0 && (
+            <button onClick={exporterExcel} style={{ background:'#10B981', color:'#fff', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+              <IconExport size={16} color="#fff"/> Exporter Excel
+            </button>
+          )}
+        </div>
+      </div>
+      {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:10, padding:'10px 14px', color:'#B91C1C', fontSize:13, marginBottom:12 }}>{erreur}</div>}
+      {resultats.length > 0 && (
+        <div>
+          <p style={{ fontSize:12, color:T.textSoft, marginBottom:8 }}>{resultats.length} résultat(s)</p>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+              <thead>
+                <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+                  {cols.map(c=><th key={c.key} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}` }}>{c.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {resultats.map((r,i)=>(
+                  <tr key={i} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)' }}>
+                    {cols.map(c=><td key={c.key} style={{ padding:'7px 10px', whiteSpace:'nowrap' }}>{r[c.key]??'-'}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ONGLET LOGS ───────────────────────────────────────────
+function OngletLogs({ T, dark, setPage }) {
+  const [logs,    setLogs]    = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function charger() {
+    setLoading(true);
+    try { const res = await api.get("/auth/logs?limit=200"); setLogs(res.data); }
+    catch(e) { console.error(e); }
+    setLoading(false);
+  }
+
+  const ACTION_COLORS = { LOGIN:"#10B981", LOGOUT:"#64748B", INSERT:"#3B82F6", UPDATE:"#F59E0B", DELETE:"#EF4444", ARCHIVE:"#8B5CF6" };
+
+  return (
+    <div>
+      <SousPageHeader titre="Logs d'activité" setPage={setPage} T={T}/>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <p style={{ fontSize:13, color:T.textSoft, margin:0 }}>{logs.length > 0 ? `${logs.length} entrée(s)` : "Cliquez sur Charger pour afficher"}</p>
+        <button onClick={charger} disabled={loading} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          <IconRefresh size={16} color="#fff"/>{loading ? "Chargement..." : "Charger les logs"}
+        </button>
+      </div>
+      {logs.length > 0 && (
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+            <thead>
+              <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+                {["ID","Date","Heure","Utilisateur","Action","Table","Détails"].map(h=>(
+                  <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l,i)=>{
+                const dt = l.created_at ? new Date(l.created_at) : null;
+                return (
+                  <tr key={i} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)' }}>
+                    <td style={{ padding:'7px 10px' }}>{l.id}</td>
+                    <td style={{ padding:'7px 10px', whiteSpace:'nowrap' }}>{dt?.toLocaleDateString('fr-FR')||'-'}</td>
+                    <td style={{ padding:'7px 10px', whiteSpace:'nowrap' }}>{dt?.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})||'-'}</td>
+                    <td style={{ padding:'7px 10px', fontWeight:600 }}>{l.utilisateur}</td>
+                    <td style={{ padding:'7px 10px' }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, color:ACTION_COLORS[l.action]||T.textSoft, background:(ACTION_COLORS[l.action]||T.textSoft)+'22' }}>{l.action}</span>
+                    </td>
+                    <td style={{ padding:'7px 10px', color:T.textSoft }}>{l.table_concernee||'-'}</td>
+                    <td style={{ padding:'7px 10px', color:T.textSoft, maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.details||'-'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ONGLET STATISTIQUES ───────────────────────────────────
+function OngletStats({ T, setPage }) {
+  const [stats,   setStats]   = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { charger(); }, []);
+
+  async function charger() {
+    setLoading(true);
+    try { const res = await api.get("/auth/stats"); setStats(res.data); }
+    catch(e) { console.error(e); }
+    setLoading(false);
+  }
+
+  if(loading) return <div style={{ textAlign:'center', padding:40, color:T.textSoft }}>Chargement...</div>;
+  if(!stats)  return <div style={{ textAlign:'center', padding:40, color:T.textSoft }}>Erreur chargement</div>;
+
+  const cartes = [
+    { label:"Relevés énergie",     value:stats.nb_energie,      icon:<IconDB    size={26} color="#F5A623"/>, color:"#F5A623" },
+    { label:"Relevés qualité",     value:stats.nb_qualite,      icon:<IconStats size={26} color="#10B981"/>, color:"#10B981" },
+    { label:"Utilisateurs actifs", value:stats.nb_utilisateurs, icon:<IconUsers size={26} color="#3B82F6"/>, color:"#3B82F6" },
+    { label:"Actions loggées",     value:stats.nb_logs,         icon:<IconLogs  size={26} color="#8B5CF6"/>, color:"#8B5CF6" },
+  ];
+
+  return (
+    <div>
+      <SousPageHeader titre="Statistiques générales" setPage={setPage} T={T}/>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:14 }}>
+        {cartes.map(c=>(
+          <div key={c.label} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:'20px 18px', borderLeft:`4px solid ${c.color}` }}>
+            <div style={{ marginBottom:10 }}>{c.icon}</div>
+            <div style={{ fontSize:32, fontWeight:800, color:c.color, lineHeight:1 }}>{c.value}</div>
+            <div style={{ fontSize:12, color:T.textSoft, marginTop:4 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── SECTION RAPPORT AB ────────────────────────────────────
+function SectionRapportAB({ T, dark }) {
+  const [dateDebut, setDateDebut] = useState("");
+  const [dateFin,   setDateFin]   = useState("");
+  const [chaine,    setChaine]    = useState("");
+  const [rapport,   setRapport]   = useState([]);
+  const [loading,   setLoading]   = useState(false);
+  const [erreur,    setErreur]    = useState(null);
+
+  const CHAINES_OPT = ["","Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  async function charger() {
+    if(!dateDebut || !dateFin) { setErreur("Sélectionnez une période."); return; }
+    setErreur(null); setLoading(true);
+    try {
+      const params = { date_debut:dateDebut, date_fin:dateFin };
+      if(chaine) params.chaine = chaine;
+      const res = await pointagesAPI.rapportAB(params);
+      setRapport(res.data);
+      if(res.data.length === 0) setErreur("Aucune absence non justifiée sur cette période.");
+    } catch(e) { setErreur("Erreur lors du chargement."); }
+    setLoading(false);
+  }
+
+  function exporterExcelAB() {
+    if(!rapport.length) return;
+    const wb = XLSX.utils.book_new();
+    const rows = [];
+    rapport.forEach(r => {
+      r.details.forEach(d => {
+        rows.push({
+          "Nom et Prénom": r.nom_prenom, "Fonction": r.fonction,
+          "Chaîne": r.chaine, "Équipe": r.equipe_nom,
+          "Date": d.date, "Jour": d.jour, "Quart": d.quart,
+          "Nb AB total": r.nb_absences, "Heures abs. tot": r.heures_total,
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = Object.keys(rows[0]).map(() => ({ wch:18 }));
+    XLSX.utils.book_append_sheet(wb, ws, "Rapport AB");
+    XLSX.writeFile(wb, `Rapport_AB_${dateDebut}_${dateFin}.xlsx`);
+  }
+
+  const totalAB     = rapport.reduce((s,r) => s + r.nb_absences,  0);
+  const totalHeures = rapport.reduce((s,r) => s + r.heures_total, 0);
+
+  return (
+    <div>
+      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:16, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:12, marginBottom:12 }}>
+          <div><label style={LS}>Date début</label><input type="date" value={dateDebut} onChange={e=>setDateDebut(e.target.value)} style={IS}/></div>
+          <div><label style={LS}>Date fin</label><input type="date" value={dateFin} onChange={e=>setDateFin(e.target.value)} style={IS}/></div>
+          <div><label style={LS}>Chaîne (optionnel)</label>
+            <select value={chaine} onChange={e=>setChaine(e.target.value)} style={IS}>
+              {CHAINES_OPT.map(c=><option key={c} value={c}>{c||"Toutes"}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={charger} disabled={loading} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            {loading ? "Chargement..." : "Générer le rapport"}
+          </button>
+          {rapport.length > 0 && (
+            <button onClick={exporterExcelAB} style={{ background:'#10B981', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+              Exporter Excel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 16px', color:'#B91C1C', fontSize:13, marginBottom:16 }}>{erreur}</div>}
+
+      {rapport.length > 0 && (
+        <>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12, marginBottom:20 }}>
+            {[
+              { label:"Employés avec AB",    value:rapport.length, color:'#EF4444' },
+              { label:"Total absences AB",   value:totalAB,        color:'#F97316' },
+              { label:"Total heures perdues",value:`${totalHeures}h`, color:'#8B5CF6' },
+            ].map(c => (
+              <div key={c.label} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:'16px', borderLeft:`4px solid ${c.color}` }}>
+                <div style={{ fontSize:28, fontWeight:800, color:c.color }}>{c.value}</div>
+                <div style={{ fontSize:12, color:T.textSoft, marginTop:4 }}>{c.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+              <thead>
+                <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+                  {["Nom et Prénom","Fonction","Chaîne","Équipe","Nb AB","Heures abs.","Détail jours"].map(h=>(
+                    <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rapport.map((r,i) => (
+                  <tr key={i} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)' }}>
+                    <td style={{ padding:'8px 10px', fontWeight:700 }}>{r.nom_prenom}</td>
+                    <td style={{ padding:'8px 10px' }}>{r.fonction}</td>
+                    <td style={{ padding:'8px 10px' }}>{r.chaine}</td>
+                    <td style={{ padding:'8px 10px' }}>{r.equipe_nom}</td>
+                    <td style={{ padding:'8px 10px' }}><span style={{ fontSize:12, fontWeight:800, color:'#EF4444', background:'rgba(239,68,68,0.1)', padding:'3px 10px', borderRadius:20 }}>{r.nb_absences}</span></td>
+                    <td style={{ padding:'8px 10px', fontWeight:700, color:'#8B5CF6' }}>{r.heures_total}h</td>
+                    <td style={{ padding:'8px 10px', color:T.textSoft, fontSize:11 }}>
+                      {r.details.map((d,j) => <div key={j}>{d.date} — {d.quart}</div>)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── SECTION HEURES SUPPLÉMENTAIRES ───────────────────────
+function SectionHeuresSupp({ T, dark }) {
+  const [dateLundi,  setDateLundi]  = useState("");
+  const [rapport,    setRapport]    = useState({ parChaine:{}, tous:[] });
+  const [loading,    setLoading]    = useState(false);
+  const [loadingPDF, setLoadingPDF] = useState(false);
+  const [erreur,     setErreur]     = useState(null);
+  const tableauRef = useRef(null);
+
+  const IS = { background:T.card, border:`1px solid ${T.border}`, borderRadius:10, padding:'8px 12px', color:T.text, fontSize:13, width:'100%' };
+  const LS = { fontSize:11, fontWeight:700, color:T.textSoft, textTransform:'uppercase', letterSpacing:0.8, marginBottom:4, display:'block' };
+
+  useEffect(() => {
+    const d = new Date(); const jour = d.getDay();
+    const diff = jour === 0 ? -6 : 1 - jour;
+    d.setDate(d.getDate() + diff);
+    setDateLundi(d.toISOString().split("T")[0]);
+  }, []);
+
+  function getDimanche(lundi) {
+    if(!lundi) return "";
+    const d = new Date(lundi); d.setDate(d.getDate() + 6);
+    return d.toISOString().split("T")[0];
+  }
+
+  function handleDateChange(val) {
+    const d = new Date(val); const jour = d.getDay();
+    const diff = jour === 0 ? -6 : 1 - jour;
+    d.setDate(d.getDate() + diff);
+    setDateLundi(d.toISOString().split("T")[0]);
+    setRapport({ parChaine:{}, tous:[] });
+  }
+
+  async function charger() {
+    if(!dateLundi) { setErreur("Sélectionnez une semaine."); return; }
+    setErreur(null); setLoading(true);
+    try {
+      const dimanche = getDimanche(dateLundi);
+      const res = await pointagesAPI.lister({ date_debut:dateLundi, date_fin:dimanche });
+
+      const parMembre = {};
+      for(const ptg of res.data) {
+        const chaine = ptg.chaine || "Inconnu";
+        for(const lg of ptg.lignes || []) {
+          if(lg.est_occasionnel) continue;
+          const cle = `${lg.membre_id}`;
+          if(!parMembre[cle]) {
+            parMembre[cle] = {
+              membre_id:lg.membre_id, nom_prenom:lg.nom_prenom,
+              fonction:lg.fonction, statut:lg.statut_emploi,
+              chaine, equipe:ptg.equipe_nom||"",
+              heures_N:0, heures_F:0, heures_PN:0,
+            };
+          }
+          parMembre[cle].heures_N  += lg.heures_N  || 0;
+          parMembre[cle].heures_F  += lg.heures_F  || 0;
+          parMembre[cle].heures_PN += lg.heures_PN || 0;
+        }
+      }
+
+      const membres = Object.values(parMembre).map(m => {
+        const ht = m.heures_N + m.heures_F;
+        const hs = Math.max(0, ht - 40);
+        const hn = ht - hs;
+        return { ...m, ht, hs, hn };
+      }).filter(m => m.hs > 0);
+
+      const parChaineResult = {};
+      for(const m of membres) {
+        if(!parChaineResult[m.chaine]) parChaineResult[m.chaine] = [];
+        parChaineResult[m.chaine].push(m);
+      }
+
+      setRapport({ parChaine:parChaineResult, tous:membres });
+      if(membres.length === 0) setErreur("Aucune heure supplémentaire trouvée pour cette semaine.");
+    } catch(e) { setErreur("Erreur lors du chargement."); console.error(e); }
+    setLoading(false);
+  }
+
+  async function exporterPDF() {
+    if(!tableauRef.current) return;
+    setLoadingPDF(true);
+    const canvas = await html2canvas(tableauRef.current, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a3' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pdfW/canvas.width, pdfH/canvas.height);
+    pdf.addImage(imgData,'PNG',(pdfW-canvas.width*ratio)/2,(pdfH-canvas.height*ratio)/2,canvas.width*ratio,canvas.height*ratio);
+    pdf.save(`Heures_Supp_SEM_${dateLundi}.pdf`);
+    setLoadingPDF(false);
+  }
+
+  const dimanche = getDimanche(dateLundi);
+  const totalHS  = rapport.tous.reduce((s,m) => s + m.hs, 0);
+  const totalHN  = rapport.tous.reduce((s,m) => s + m.hn, 0);
+
+  const TableauHS = ({ membres, titre, couleur }) => (
+    <div style={{ marginBottom:20 }}>
+      <div style={{
+        background:couleur||T.primary, color:'#fff',
+        padding:'10px 16px', borderRadius:'10px 10px 0 0',
+        fontSize:13, fontWeight:700,
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+      }}>
+        <span>{titre}</span>
+        <span style={{ fontSize:12 }}>
+          {membres.length} employé(s) · HS total : <strong>{membres.reduce((s,m)=>s+m.hs,0)}h</strong>
+        </span>
+      </div>
+      <div style={{ overflowX:'auto', border:`1px solid ${T.border}`, borderTop:'none', borderRadius:'0 0 10px 10px' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, color:T.text }}>
+          <thead>
+            <tr style={{ background:dark?'#1E293B':'#F1F5F9' }}>
+              {["#","Nom et Prénom","Fonction","Équipe","H. Travaillées","H. Normales (HN)","H. Supp (HS)","Total"].map(h=>(
+                <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontWeight:700, color:T.textSoft, fontSize:11, whiteSpace:'nowrap', borderBottom:`2px solid ${T.border}` }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {membres.map((m,i) => (
+              <tr key={i} style={{ borderBottom:`1px solid ${T.border}`, background:i%2===0?'transparent':dark?'rgba(255,255,255,0.02)':'rgba(0,0,0,0.01)' }}>
+                <td style={{ padding:'8px 12px', color:T.textMuted }}>{i+1}</td>
+                <td style={{ padding:'8px 12px', fontWeight:700 }}>{m.nom_prenom}</td>
+                <td style={{ padding:'8px 12px' }}>{m.fonction}</td>
+                <td style={{ padding:'8px 12px', color:T.textSoft }}>{m.equipe}</td>
+                <td style={{ padding:'8px 12px', textAlign:'center', fontWeight:600 }}>{m.ht}h</td>
+                <td style={{ padding:'8px 12px', textAlign:'center', color:'#10B981', fontWeight:700 }}>{m.hn}h</td>
+                <td style={{ padding:'8px 12px', textAlign:'center' }}>
+                  <span style={{ background:'rgba(239,68,68,0.1)', color:'#EF4444', padding:'3px 12px', borderRadius:20, fontWeight:800, fontSize:13 }}>+{m.hs}h</span>
+                </td>
+                <td style={{ padding:'8px 12px', textAlign:'center', fontWeight:700, color:T.primary }}>{m.ht}h</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Filtres */}
+      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:16, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:12, marginBottom:12 }}>
+          <div>
+            <label style={LS}>Semaine (choisir n'importe quel jour)</label>
+            <input type="date" value={dateLundi} onChange={e => handleDateChange(e.target.value)} style={IS}/>
+          </div>
+        </div>
+        {dateLundi && (
+          <div style={{ fontSize:13, color:T.text, marginBottom:12, padding:'8px 12px', background:T.borderSoft, borderRadius:8, border:`1px solid ${T.border}` }}>
+            Semaine du <strong>{new Date(dateLundi).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</strong> au <strong>{new Date(dimanche).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</strong>
+          </div>
+        )}
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <button onClick={charger} disabled={loading} style={{ background:T.primary, color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700, cursor:'pointer', opacity:loading?0.7:1 }}>
+            {loading ? "Chargement..." : "Générer le rapport"}
+          </button>
+          {rapport.tous.length > 0 && (
+            <button onClick={exporterPDF} disabled={loadingPDF} style={{ background:'#DA291C', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700, cursor:'pointer', opacity:loadingPDF?0.7:1, display:'flex', alignItems:'center', gap:6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
+              {loadingPDF ? "Export..." : "Exporter PDF"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:12, padding:'12px 16px', color:'#B91C1C', fontSize:13, marginBottom:16 }}>{erreur}</div>}
+
+      {rapport.tous.length > 0 && (
+        <div ref={tableauRef}>
+          {/* Cartes résumé */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:12, marginBottom:24 }}>
+            {[
+              { label:"Employés avec HS",   value:rapport.tous.length,                    color:'#F97316' },
+              { label:"Total Heures Norm",  value:`${totalHN}h`,                          color:'#10B981' },
+              { label:"Total Heures Supp",  value:`${totalHS}h`,                          color:'#EF4444' },
+              { label:"Chaînes concernées", value:Object.keys(rapport.parChaine).length,  color:T.primary },
+            ].map(c => (
+              <div key={c.label} style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:'16px', borderLeft:`4px solid ${c.color}` }}>
+                <div style={{ fontSize:28, fontWeight:800, color:c.color }}>{c.value}</div>
+                <div style={{ fontSize:12, color:T.textSoft, marginTop:4 }}>{c.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Par chaîne */}
+          <p style={{ fontSize:14, fontWeight:700, color:T.text, marginBottom:12 }}>Détail par chaîne</p>
+          {CHAINES.filter(c => rapport.parChaine[c]?.length > 0).map(chaine => (
+            <TableauHS key={chaine} titre={chaine} membres={rapport.parChaine[chaine]} couleur={T.primary}/>
+          ))}
+
+          {/* Global */}
+          <div style={{ borderTop:`2px solid ${T.border}`, paddingTop:20, marginTop:8 }}>
+            <p style={{ fontSize:14, fontWeight:700, color:T.text, marginBottom:12 }}>Vue globale — Toutes chaînes</p>
+            <TableauHS titre="Toutes les chaînes combinées" membres={rapport.tous} couleur="#1E293B"/>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
