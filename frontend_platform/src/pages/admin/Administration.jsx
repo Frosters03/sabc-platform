@@ -6,14 +6,14 @@ import { equipesAPI, pointagesAPI } from '../../services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const ROLES = ["operateur", "chef_atelier", "directeur", "admin"];
+const ROLES = ["manager", "chef_atelier", "contremaitre"];
 const ROLE_LABELS = {
-  operateur: "Opérateur", chef_atelier: "Chef d'atelier",
-  directeur: "Directeur", admin: "Administrateur",
+  manager: "Manager", chef_atelier: "Chef d'atelier",
+  contremaitre: "Contremaitre",
 };
 const ROLE_COLORS = {
-  operateur: "#64748B", chef_atelier: "#10B981",
-  directeur: "#3B82F6", admin: "#DA291C",
+  chef_atelier: "#10B981",
+  contremaitre: "#3B82F6", manager: "#DA291C",
 };
 const CHAINES = ["Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
 
@@ -214,7 +214,7 @@ function OngletUsers({ T, dark, setPage }) {
                   {u.last_login && <span style={{ fontSize:10, color:T.textMuted }}>Dernière connexion : {new Date(u.last_login).toLocaleDateString('fr-FR')}</span>}
                 </div>
               </div>
-              {u.username !== 'admin' ? (
+              {u.username !== 'manager' ? (
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={() => ouvrirModifier(u)} style={{ background:T.borderSoft, border:`1px solid ${T.border}`, borderRadius:8, padding:'7px 12px', fontSize:12, fontWeight:600, color:T.text, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
                     <IconEdit size={14} color={T.textSoft}/> Modifier
