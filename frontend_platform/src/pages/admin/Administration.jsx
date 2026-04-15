@@ -333,7 +333,7 @@ function OngletEquipes({ T, dark, setPage }) {
       {succes && <div style={{ background:'#F0FDF4', border:'1px solid #86EFAC', borderRadius:10, padding:'10px 14px', color:'#166534', fontSize:13, marginBottom:12 }}>{succes}</div>}
       {erreur && <div style={{ background:'#FEF2F2', border:'1px solid #FCA5A5', borderRadius:10, padding:'10px 14px', color:'#B91C1C', fontSize:13, marginBottom:12 }}>{erreur}</div>}
 
-      <div style={{ display:'grid', gridTemplateColumns:'250px 1fr', gap:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(250px, 1fr))', gap:16 }}>
         {/* Liste équipes */}
         <div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
@@ -756,15 +756,17 @@ function OngletPointages({ T, dark, setPage }) {
 
             {/* Badge type fiche */}
             <div style={{ marginBottom:12 }}>
-              {typeFiche === 'am' ? (
-                <span style={{ fontSize:12, fontWeight:700, color:'#F97316', background:'rgba(249,115,22,0.1)', padding:'4px 12px', borderRadius:20, border:'1px solid #F97316' }}>
-                  Mode : Agents de maîtrise — Export fichier AM
-                </span>
-              ) : (
-                <span style={{ fontSize:12, fontWeight:700, color:'#3B82F6', background:'rgba(59,130,246,0.1)', padding:'4px 12px', borderRadius:20, border:'1px solid #3B82F6' }}>
-                  Mode : Personnel titulaire — Export fichier standard
-                </span>
-              )}
+              <span style={{
+                display:'inline-block', maxWidth:'100%',
+                fontSize:11, fontWeight:700,
+                color: typeFiche==='am' ? '#F97316' : '#3B82F6',
+                background: typeFiche==='am' ? 'rgba(249,115,22,0.1)' : 'rgba(59,130,246,0.1)',
+                padding:'4px 10px', borderRadius:20,
+                border:`1px solid ${typeFiche==='am' ? '#F97316' : '#3B82F6'}`,
+                whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+              }}>
+                {typeFiche==='am' ? 'Mode : AM — Export fichier AM' : 'Mode : Titulaire — Export standard'}
+              </span>
             </div>
 
             {dateLundi && (
