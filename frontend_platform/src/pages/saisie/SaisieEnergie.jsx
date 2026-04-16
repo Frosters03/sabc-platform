@@ -143,7 +143,7 @@ export default function SaisieEnergie() {
 
   const set = (field) => (value) => setForm(prev => ({ ...prev, [field]: value }));
 
-  const ateliers = ['Chaîne 8', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16', 'Traitement des eaux'];
+  const ateliers = ['Chaîne 8', 'Chaine 13', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16'];
   const quarts   = ['22h-6h', '6h-14h', '14h-22h'];
 
   const valider = () => {

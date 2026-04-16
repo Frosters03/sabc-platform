@@ -27,7 +27,7 @@ const IconBottle  = ({size=18,color='currentColor'}) => <svg width={size} height
 // ── NB CASES SELON ATELIER ────────────────────────────────
 const getNbCases = (atelier) => {
   if (atelier === 'Chaîne 14') return 20;
-  if (atelier === 'Traitement des eaux') return 0;
+  if (atelier === 'Chaine 13') return 0;
   return 24;
 };
 
@@ -240,7 +240,7 @@ export default function SaisieQualite() {
 
   const set = (field) => (value) => setForm(prev => ({ ...prev, [field]: value }));
 
-  const ateliers = ['Chaîne 8', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16', 'Traitement des eaux'];
+  const ateliers = ['Chaîne 8', 'Chaine 13', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16',];
   const quarts   = ['22h-6h', '6h-14h', '14h-22h'];
 
   const valider = () => {
@@ -427,13 +427,13 @@ export default function SaisieQualite() {
         </SectionCard>
       )}
 
-      {form.atelier === 'Traitement des eaux' && (
+      {form.atelier === 'Chaine 13' && (
         <div style={{
           padding: '12px 16px', borderRadius: 12,
           background: T.bg, border: `1px solid ${T.border}`,
           color: T.textSoft, fontSize: 13, marginBottom: 14, textAlign: 'center',
         }}>
-          Pas de sertissage pour le Traitement des eaux
+          Pas de sertissage pour le Chaine 13
         </div>
       )}
 
