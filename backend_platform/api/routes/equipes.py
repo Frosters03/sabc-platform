@@ -56,7 +56,7 @@ def get_fonctions(current_user: Utilisateur = Depends(get_current_user)):
 def creer_equipe(
     data: EquipeCreate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
     equipe = Equipe(nom=data.nom, chaine=data.chaine)
     db.add(equipe)
@@ -72,7 +72,7 @@ def modifier_equipe(
     equipe_id: int,
     data: EquipeUpdate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
     equipe = db.query(Equipe).filter(Equipe.id == equipe_id).first()
     if not equipe:
@@ -89,7 +89,7 @@ def modifier_equipe(
 def supprimer_equipe(
     equipe_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
     equipe = db.query(Equipe).filter(Equipe.id == equipe_id).first()
     if not equipe:
@@ -104,7 +104,7 @@ def ajouter_membre(
     equipe_id: int,
     data: MembreCreate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
     equipe = db.query(Equipe).filter(Equipe.id == equipe_id).first()
     if not equipe:
@@ -124,7 +124,7 @@ def modifier_membre(
     membre_id: int,
     data: MembreCreate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
     membre = db.query(MembreEquipe).filter(
         MembreEquipe.id == membre_id,
