@@ -9,8 +9,45 @@ from models.utilisateur import Utilisateur
 from schemas.donnees import QualiteCreate, QualiteResponse, MessageResponse
 from .auth import get_current_user, require_role, log_action
 
+from models.qualite_a import QualiteA
+from schemas.donnees import QualiteACreate, QualiteAResponse
+
 router = APIRouter(prefix="/qualite", tags=["Qualité"])
 
+
+# ─── VOLET A ──────────────────────────────────────────────
+
+@router.post("/volet-a", response_model=QualiteAResponse)
+def creer_releve_a(
+    data: QualiteACreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Soumet un relevé Qualité Volet A (bière alcoolisée)"""
+    releve = QualiteA(**data.model_dump(), saisi_par=current_user.username)
+    db.add(releve)
+    db.commit()
+    db.refresh(releve)
+    log_action(db, current_user.username, "INSERT", "qualite_a",
+               f"Atelier: {data.atelier}, Produit: {data.produit}")
+    return releve
+
+
+@router.get("/volet-a", response_model=list[QualiteAResponse])
+def get_releves_a(
+    atelier:    Optional[str]  = Query(None),
+    date_debut: Optional[date] = Query(None),
+    date_fin:   Optional[date] = Query(None),
+    limit:      int            = Query(100, le=500),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Récupère les relevés Volet A"""
+    query = db.query(QualiteA)
+    if atelier:    query = query.filter(QualiteA.atelier == atelier)
+    if date_debut: query = query.filter(QualiteA.date >= date_debut)
+    if date_fin:   query = query.filter(QualiteA.date <= date_fin)
+    return query.order_by(QualiteA.date.desc()).limit(limit).all()
 
 @router.post("/", response_model=QualiteResponse)
 def creer_releve(

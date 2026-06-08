@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy import DateTime
@@ -21,16 +21,19 @@ class Equipe(Base):
 class MembreEquipe(Base):
     __tablename__ = "membres_equipe"
 
-    id         = Column(Integer, primary_key=True, index=True)
-    equipe_id  = Column(Integer, ForeignKey("equipes.id"), nullable=False)
-    fonction   = Column(String(100), nullable=False)
-    # 14 fonctions prédéfinies
-    nom_prenom = Column(String(150), nullable=False)
-    matricule  = Column(String(50), nullable=True)
-    statut     = Column(String(20), default="titulaire")
-    # "titulaire" ou "occasionnel"
-    ordre      = Column(Integer, default=0)
-    # Pour garder l'ordre des 14 fonctions
-    actif      = Column(Boolean, default=True)
+    id                  = Column(Integer, primary_key=True, index=True)
+    equipe_id           = Column(Integer, ForeignKey("equipes.id"), nullable=False)
+    fonction            = Column(String(100), nullable=False)
+    nom_prenom          = Column(String(150), nullable=False)
+    matricule           = Column(String(50), nullable=True)
+    statut              = Column(String(20), default="titulaire")
+    ordre               = Column(Integer, default=0)
+    actif               = Column(Boolean, default=True)
+    # Champs supplémentaires occasionnels/pépinières
+    date_naissance      = Column(String(50), nullable=True)
+    lieu_naissance      = Column(String(100), nullable=True)
+    cnps                = Column(String(50), nullable=True)
+    categorie_pro       = Column(String(100), nullable=True)
+    salaire_horaire     = Column(Float, nullable=True)
 
-    equipe     = relationship("Equipe", back_populates="membres")
+    equipe = relationship("Equipe", back_populates="membres")

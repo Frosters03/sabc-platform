@@ -258,7 +258,7 @@ function OngletEquipes({ T, dark, setPage }) {
   const [modalEq,  setModalEq]  = useState(null);
   const [modalMb,  setModalMb]  = useState(null);
   const [formEq,   setFormEq]   = useState({ nom:'', chaine:'Chaîne 8' });
-  const [formMb,   setFormMb]   = useState({ fonction:'', nom_prenom:'', matricule:'', statut:'titulaire', ordre:0 });
+  const [formMb, setFormMb] = useState({ fonction:'', nom_prenom:'', matricule:'', statut:'titulaire', ordre:0, date_naissance:'', lieu_naissance:'', cnps:'', categorie_pro:'', salaire_horaire:null });
   const [erreur,   setErreur]   = useState(null);
   const [succes,   setSucces]   = useState(null);
 
@@ -302,8 +302,7 @@ function OngletEquipes({ T, dark, setPage }) {
   async function sauvegarderMembre() {
     setErreur(null);
     if(!selected) return;
-    const estAM = FONCTIONS_AM.includes(formMb.fonction);
-    const statutFinal = estAM ? 'am' : 'titulaire';
+    const statutFinal = formMb.statut || 'titulaire';
     try {
       if(modalMb === "create") {
         await equipesAPI.ajouterMembre(selected.id, { ...formMb, statut: statutFinal, ordre: selected.membres.length });
@@ -549,6 +548,42 @@ function OngletEquipes({ T, dark, setPage }) {
                 </div>
               )}
 
+              {formMb.statut === 'occasionnel' && (
+                <>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={LS}>Date de naissance</label>
+                      <input value={formMb.date_naissance||''} onChange={e=>setFormMb({...formMb,date_naissance:e.target.value})} style={IS} placeholder="ex: 12/05/1995"/>
+                    </div>
+                    <div>
+                      <label style={LS}>Lieu de naissance</label>
+                      <input value={formMb.lieu_naissance||''} onChange={e=>setFormMb({...formMb,lieu_naissance:e.target.value})} style={IS} placeholder="ex: Yaoundé"/>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={LS}>N° CNPS</label>
+                      <input value={formMb.cnps||''} onChange={e=>setFormMb({...formMb,cnps:e.target.value})} style={IS} placeholder="ex: 123456789"/>
+                    </div>
+                    <div>
+                      <label style={LS}>Catégorie professionnelle</label>
+                      <input value={formMb.categorie_pro||''} onChange={e=>setFormMb({...formMb,categorie_pro:e.target.value})} style={IS} placeholder="ex: OS1"/>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={LS}>Salaire horaire (FCFA)</label>
+                    <input type="number" value={formMb.salaire_horaire||''} onChange={e=>setFormMb({...formMb,salaire_horaire:parseFloat(e.target.value)||null})} style={IS} placeholder="ex: 575"/>
+                  </div>
+                </>
+              )}
+
+              {formMb.statut === 'pepiniere' && (
+                <div>
+                  <label style={LS}>Taux horaire (FCFA)</label>
+                  <input type="number" value={formMb.salaire_horaire||''} onChange={e=>setFormMb({...formMb,salaire_horaire:parseFloat(e.target.value)||null})} style={IS} placeholder="ex: 4600"/>
+                </div>
+              )}
+
               {formMb.statut !== 'titulaire' && formMb.statut && (
                 <div style={{
                   background: CATEGORIES_SPECIALES.find(c=>c.key===formMb.statut)?.bg,
@@ -665,6 +700,48 @@ function OngletPointages({ T, dark, setPage }) {
     setLoadingExp(false);
   }
 
+  async function exporterExcelPrestataire() {
+    if(!equipeId || !dateLundi) return;
+    setLoadingExp(true);
+    try {
+      const res = await pointagesAPI.exportExcelPrestataire({ equipe_id: equipeId, date_lundi: dateLundi });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `Pointage_Prestataire_${dateLundi}.xlsx`;
+      a.click();
+    } catch(e) { setErreur("Erreur export prestataire"); }
+    setLoadingExp(false);
+  }
+
+  async function exporterExcelPepiniere() {
+    if(!equipeId || !dateLundi) return;
+    setLoadingExp(true);
+    try {
+      const res = await pointagesAPI.exportExcelPepiniere({ equipe_id: equipeId, date_lundi: dateLundi });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `Pointage_Pepiniere_${dateLundi}.xlsx`;
+      a.click();
+    } catch(e) { setErreur("Erreur export pépinière"); }
+    setLoadingExp(false);
+  }
+
+  async function exporterExcelOccasionnel() {
+    if(!equipeId || !dateLundi) return;
+    setLoadingExp(true);
+    try {
+      const res = await pointagesAPI.exportExcelOccasionnel({ equipe_id: equipeId, date_lundi: dateLundi });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `Pointage_Occasionnel_${dateLundi}.xlsx`;
+      a.click();
+    } catch(e) { setErreur("Erreur export occasionnel"); }
+    setLoadingExp(false);
+  }
+
   async function exporterPDF() {
     if(!equipeId || !dateLundi) { setErreur("Sélectionnez une équipe et une semaine."); return; }
     if(pointages.length === 0)  { setErreur("Chargez d'abord les pointages."); return; }
@@ -695,9 +772,12 @@ function OngletPointages({ T, dark, setPage }) {
   function filtrerLignes(lignes) {
     if(!lignes) return [];
     return lignes.filter(l => {
-      if(l.est_occasionnel) return false;
-      const estAM = FONCTIONS_AM.includes(l.fonction);
-      return typeFiche === 'am' ? estAM : !estAM;
+      if(typeFiche === 'titulaires')   return l.statut_emploi === 'titulaire' || (!l.est_occasionnel && !FONCTIONS_AM.includes(l.fonction) && !['am','prestataire','pepiniere','occasionnel'].includes(l.statut_emploi));
+      if(typeFiche === 'am')           return l.statut_emploi === 'am' || FONCTIONS_AM.includes(l.fonction);
+      if(typeFiche === 'prestataire')  return l.statut_emploi === 'prestataire';
+      if(typeFiche === 'pepiniere')    return l.statut_emploi === 'pepiniere';
+      if(typeFiche === 'occasionnel')  return l.statut_emploi === 'occasionnel' || l.est_occasionnel;
+      return true;
     });
   }
 
@@ -750,6 +830,9 @@ function OngletPointages({ T, dark, setPage }) {
                 <select value={typeFiche} onChange={e => setTypeFiche(e.target.value)} style={IS}>
                   <option value="titulaires">Personnel titulaire</option>
                   <option value="am">Agents de maîtrise (AM)</option>
+                  <option value="prestataire">Prestataires</option>
+                  <option value="pepiniere">Pépinières</option>
+                  <option value="occasionnel">Occasionnels</option>
                 </select>
               </div>
             </div>
@@ -759,13 +842,31 @@ function OngletPointages({ T, dark, setPage }) {
               <span style={{
                 display:'inline-block', maxWidth:'100%',
                 fontSize:11, fontWeight:700,
-                color: typeFiche==='am' ? '#F97316' : '#3B82F6',
-                background: typeFiche==='am' ? 'rgba(249,115,22,0.1)' : 'rgba(59,130,246,0.1)',
+                color: typeFiche==='am' ? '#F97316' :
+                       typeFiche==='prestataire' ? '#8B5CF6' :
+                       typeFiche==='pepiniere' ? '#06B6D4' :
+                       typeFiche==='occasionnel' ? '#F59E0B' :
+                       '#3B82F6',
+                background: typeFiche==='am' ? 'rgba(249,115,22,0.1)' :
+                            typeFiche==='prestataire' ? 'rgba(139,92,246,0.1)' :
+                            typeFiche==='pepiniere' ? 'rgba(6,182,212,0.1)' :
+                            typeFiche==='occasionnel' ? 'rgba(245,158,11,0.1)' :
+                            'rgba(59,130,246,0.1)',
                 padding:'4px 10px', borderRadius:20,
-                border:`1px solid ${typeFiche==='am' ? '#F97316' : '#3B82F6'}`,
+                border:`1px solid ${
+                  typeFiche==='am' ? '#F97316' :
+                  typeFiche==='prestataire' ? '#8B5CF6' :
+                  typeFiche==='pepiniere' ? '#06B6D4' :
+                  typeFiche==='occasionnel' ? '#F59E0B' :
+                  '#3B82F6'
+                }`,
                 whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
               }}>
-                {typeFiche==='am' ? 'Mode : AM — Export fichier AM' : 'Mode : Titulaire — Export standard'}
+                {typeFiche==='am' ? 'Mode : AM — Export fichier AM' :
+                 typeFiche==='prestataire' ? 'Mode : Prestataires — Export fichier Prestataires' :
+                 typeFiche==='pepiniere' ? 'Mode : Pépinières — Export fichier Pépinières' :
+                 typeFiche==='occasionnel' ? 'Mode : Occasionnels — Export fichier Occasionnels' :
+                 'Mode : Titulaire — Export standard'}
               </span>
             </div>
 
@@ -784,10 +885,21 @@ function OngletPointages({ T, dark, setPage }) {
 
               {/* Bouton export Excel selon le type */}
               <button
-                onClick={typeFiche === 'am' ? exporterExcelAM : exporterExcel}
+                onClick={
+                  typeFiche === 'am' ? exporterExcelAM :
+                  typeFiche === 'prestataire' ? exporterExcelPrestataire :
+                  typeFiche === 'pepiniere' ? exporterExcelPepiniere :
+                  typeFiche === 'occasionnel' ? exporterExcelOccasionnel :
+                  exporterExcel
+                }
                 disabled={loadingExp||!equipeId||!dateLundi}
                 style={{
-                  background:(!equipeId||!dateLundi)?T.borderSoft:typeFiche==='am'?'#F97316':'#10B981',
+                  background: (!equipeId||!dateLundi) ? T.borderSoft :
+                    typeFiche==='am' ? '#F97316' :
+                    typeFiche==='prestataire' ? '#8B5CF6' :
+                    typeFiche==='pepiniere' ? '#06B6D4' :
+                    typeFiche==='occasionnel' ? '#F59E0B' :
+                    '#10B981',
                   color:(!equipeId||!dateLundi)?T.textSoft:'#fff',
                   border:`1px solid ${(!equipeId||!dateLundi)?T.border:typeFiche==='am'?'#F97316':'#10B981'}`,
                   borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:700,

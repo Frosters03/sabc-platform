@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Boolean
 from sqlalchemy.sql import func
 from core.database import Base
 
@@ -21,3 +21,4 @@ class LeanEnergie(Base):
     production_hl = Column(Float, nullable=True)   # hl
     saisi_par     = Column(String(100), nullable=True)
     created_at    = Column(DateTime, default=func.now())
+    arret_planifie = Column(Boolean, default=False)  # True = entretien hebdomadaire planifié

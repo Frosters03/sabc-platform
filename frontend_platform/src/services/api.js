@@ -6,6 +6,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 // Instance axios configurée
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true',
@@ -65,6 +66,10 @@ export const qualiteAPI = {
     api.get(`/qualite/${id}`),
   supprimer: (id) =>
     api.delete(`/qualite/${id}`),
+  creerVoletA:  (data)   => 
+    api.post('/qualite/volet-a', data),
+  listerVoletA: (params) => 
+    api.get('/qualite/volet-a',  { params }),
 };
 
 // ── ALERTES ───────────────────────────────────────────────
@@ -105,6 +110,22 @@ export const pointagesAPI = {
     params,
     responseType: 'blob',
   }),
+  exportExcelPrestataire: (params) => api.get('/pointages/export-excel-prestataire', { params, responseType: 'blob' }),
+  exportExcelPepiniere:   (params) => api.get('/pointages/export-excel-pepiniere',   { params, responseType: 'blob' }),
+  exportExcelOccasionnel: (params) => api.get('/pointages/export-excel-occasionnel', { params, responseType: 'blob' }),
+};
+
+// ── MAINTENANCE PRÉDICTIVE IA ─────────────────────────────
+export const maintenanceAPI = {
+  lancerAnalyseTous: () =>
+    api.post('/maintenance/analyser-tous', {}, { timeout: 180000 }), // 3 min
+  lancerAnalyse: (atelier) =>
+    api.post(`/maintenance/analyser/${encodeURIComponent(atelier)}`, {}, { timeout: 120000 }),
+  getScoresSante: ()       => api.get('/maintenance/scores-sante'),
+  getAnomalies:  (params)  => api.get('/maintenance/anomalies',       { params }),
+  getOEE:        (params)  => api.get('/maintenance/oee',             { params }),
+  getPrevisions: (params)  => api.get('/maintenance/previsions',      { params }),
+  getResume:     ()        => api.get('/maintenance/dashboard-resume'),
 };
 
 export default api;

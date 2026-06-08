@@ -357,10 +357,22 @@ export default function SaisiePointage() {
                         <span style={{
                           fontSize:10, fontWeight:700,
                           padding:'3px 10px', borderRadius:20,
-                          color: l.statut_emploi === 'titulaire' ? '#3B82F6' : '#F59E0B',
-                          background: l.statut_emploi === 'titulaire' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
+                          color: l.statut_emploi==='titulaire'  ? '#3B82F6'
+                               : l.statut_emploi==='am'         ? '#F97316'
+                               : l.statut_emploi==='prestataire'? '#8B5CF6'
+                               : l.statut_emploi==='pepiniere'  ? '#06B6D4'
+                               : '#F59E0B',
+                          background: l.statut_emploi==='titulaire'  ? 'rgba(59,130,246,0.1)'
+                                    : l.statut_emploi==='am'         ? 'rgba(249,115,22,0.1)'
+                                    : l.statut_emploi==='prestataire'? 'rgba(139,92,246,0.1)'
+                                    : l.statut_emploi==='pepiniere'  ? 'rgba(6,182,212,0.1)'
+                                    : 'rgba(245,158,11,0.1)',
                         }}>
-                          {l.statut_emploi === 'titulaire' ? 'Titulaire' : 'Occasionnel'}
+                          { l.statut_emploi==='titulaire'   ? 'Titulaire'
+                          : l.statut_emploi==='am'          ? 'Agent de maîtrise'
+                          : l.statut_emploi==='prestataire' ? 'Prestataire'
+                          : l.statut_emploi==='pepiniere'   ? 'Pépinière'
+                          : 'Occasionnel'}
                         </span>
                       </td>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../components/layout/Layout';
-import { alertesAPI, energieAPI } from '../../services/api';
+import { alertesAPI, energieAPI, maintenanceAPI } from '../../services/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell, LabelList
@@ -51,6 +52,7 @@ const IconCheck     = ({size=18,color='currentColor'}) => <svg width={size} heig
 const IconTrendUp   = ({size=13,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>;
 const IconTrendDown = ({size=13,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6z"/></svg>;
 const IconDot       = ({size=10,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><circle cx="12" cy="12" r="8"/></svg>;
+const IconBrain = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>;
 
 // ── KPI CARD ──────────────────────────────────────────────
 function KpiCard({ icon, label, value, unit, color, trend, trendVal, progress, T, isMobile }) {
@@ -164,10 +166,12 @@ export default function Dashboard() {
   const { user }  = useAuth();
   const { T }     = useTheme();
   const isMobile  = useIsMobile();
+  const navigate = useNavigate();
 
   const [alertes,      setAlertes]      = useState([]);
   const [nbAlertes,    setNbAlertes]    = useState(0);
   const [relevesC8,    setRelevesC8]    = useState([]);
+  const [scoresSante, setScoresSante] = useState({});
   const [relevesJm1,   setRelevesJm1]   = useState([]);  // tous ateliers J-1
   const [loading,      setLoading]      = useState(true);
   const [activeBar,    setActiveBar]    = useState(null);
@@ -177,16 +181,18 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [alertesRes, countRes, relevesC8Res, relevesJm1Res] = await Promise.all([
+        const [alertesRes, countRes, relevesC8Res, relevesJm1Res, scoresRes] = await Promise.all([
           alertesAPI.lister({ lu: false }),
           alertesAPI.compter(),
           energieAPI.lister({ atelier: 'Chaîne 8' }),
           energieAPI.lister({ date_debut: jm1, date_fin: jm1, limit: 500 }),
+          maintenanceAPI.getScoresSante().catch(() => ({ data: {} })),
         ]);
         setAlertes(alertesRes.data.slice(0, 6));
         setNbAlertes(countRes.data.total || 0);
         setRelevesC8(relevesC8Res.data);
         setRelevesJm1(relevesJm1Res.data);
+        setScoresSante(scoresRes.data || {});
       } catch(e) {
         console.error(e);
       } finally {
@@ -313,6 +319,89 @@ export default function Dashboard() {
           T={T} isMobile={isMobile}
         />
 
+        {/* SANTÉ DES CHAÎNES IA */}
+        {Object.keys(scoresSante).length > 0 && (
+          <div style={{
+            background: T.card, borderRadius: 14, padding: '20px',
+            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
+            border: `1px solid ${T.border}`, marginBottom: 20,
+          }}>
+            <div style={{ display:'flex', justifyContent:'space-between',
+              alignItems:'center', marginBottom:16 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ width:26, height:26, borderRadius:7,
+                  background:`${T.primary}18`,
+                  display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <IconBrain size={14} color={T.primary}/>
+                </div>
+                <h3 style={{ margin:0, fontSize:13, fontWeight:700, color:T.text }}>
+                  Santé des chaînes · IA
+                </h3>
+              </div>
+              <span onClick={() => navigate('/maintenance')}
+                style={{ fontSize:12, color:T.primary, cursor:'pointer', fontWeight:600 }}>
+                Détails →
+              </span>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+              gap: 12,
+            }}>
+              {['Chaîne 8','Chaîne 14','Chaîne 15','Chaîne 16'].map(a => {
+                const s = scoresSante[a];
+                const score  = s?.score ?? null;
+                const niveau = s?.niveau ?? 'inconnu';
+                const color  = niveau === 'vert'   ? '#22C55E'
+                             : niveau === 'orange' ? '#F59E0B'
+                             : niveau === 'rouge'  ? '#EF4444'
+                             : T.textSoft;
+                const r = 28, circum = 2 * Math.PI * r;
+                const offset = score != null ? circum - (score/100)*circum : circum;
+
+                return (
+                  <div key={a} style={{
+                    background: T.bg, borderRadius: 10,
+                    padding: '12px', textAlign: 'center',
+                    border: `1px solid ${T.border}`,
+                  }}>
+                    <svg width="70" height="70" viewBox="0 0 70 70">
+                      <circle cx="35" cy="35" r={r} fill="none"
+                        stroke={T.border} strokeWidth="6"/>
+                      <circle cx="35" cy="35" r={r} fill="none"
+                        stroke={color} strokeWidth="6"
+                        strokeDasharray={circum}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 35 35)"
+                        style={{ transition:'stroke-dashoffset 1s ease' }}
+                      />
+                      <text x="35" y="35" textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={score != null ? T.text : T.textSoft}
+                        fontSize="14" fontWeight="700" fontFamily="Arial">
+                        {score != null ? Math.round(score) : '—'}
+                      </text>
+                    </svg>
+                    <div style={{ fontSize:11, color:T.text, fontWeight:600, marginTop:4 }}>
+                      {a.replace('Chaîne ','Ch.')}
+                    </div>
+                    <div style={{
+                      fontSize:9, fontWeight:700, color,
+                      background:`${color}18`,
+                      padding:'1px 8px', borderRadius:20, marginTop:3,
+                      display:'inline-block',
+                    }}>
+                      {niveau === 'vert' ? 'Bon' : niveau === 'orange' ? 'Attention' : niveau === 'rouge' ? 'Critique' : '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 2 — Alertes */}
         <KpiCard
           icon={<IconBell size={isMobile?17:20} color={nbAlertes>0?T.danger:T.success}/>}
@@ -351,17 +440,16 @@ export default function Dashboard() {
         <ChartCard
           title="Consommation eau" subtitle="Chaîne 8 — bain + rinçage (m³/jour)"
           icon={<IconWater size={15} color={T.primary}/>} iconColor={T.primary}
-          badge="30 derniers jours" T={T}
+          badge="14 derniers jours" T={T}
         >
           {chartEau.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartEau} barSize={isMobile?20:28} barCategoryGap="15%" onMouseLeave={()=>setActiveBar(null)}>
+            <ResponsiveContainer width="100%" height={210}>
+              <BarChart data={chartEau.slice(-14)} barSize={isMobile?14:18} barCategoryGap="25%">
                 <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
                 <XAxis dataKey="name" tick={{fontSize:10,fill:T.textSoft}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fontSize:10,fill:T.textSoft}} axisLine={false} tickLine={false}/>
                 <Tooltip content={(props)=><CustomTooltip {...props} T={T}/>} cursor={{fill:`${T.border}60`}}/>
                 <Bar dataKey="Eau (m³)" radius={[6,6,0,0]} onMouseEnter={(_,idx)=>setActiveBar(idx)}>
-                  <LabelList dataKey="Eau (m³)" position="top" style={{fontSize:9,fill:T.textSoft}}/>
                   {chartEau.map((_,idx)=>(
                     <Cell key={idx} fill={activeBar===idx?T.primaryDark:T.primary} fillOpacity={activeBar!==null&&activeBar!==idx?0.5:1}/>
                   ))}
@@ -377,17 +465,16 @@ export default function Dashboard() {
         <ChartCard
           title="Consommation électrique" subtitle="Chaîne 8 — kWh par jour"
           icon={<IconBolt size={15} color={T.gold}/>} iconColor={T.gold}
-          badge="30 derniers jours" T={T}
+          badge="14 derniers jours" T={T}
         >
           {chartElec.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartElec} barSize={isMobile?20:28} barCategoryGap="15%">
+            <ResponsiveContainer width="100%" height={210}>
+              <BarChart data={chartElec.slice(-14)} barSize={isMobile?14:18} barCategoryGap="25%">
                 <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
                 <XAxis dataKey="name" tick={{fontSize:10,fill:T.textSoft}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fontSize:10,fill:T.textSoft}} axisLine={false} tickLine={false}/>
                 <Tooltip content={(props)=><CustomTooltip {...props} T={T}/>} cursor={{fill:`${T.border}60`}}/>
                 <Bar dataKey="Élec (kWh)" fill={T.gold} radius={[6,6,0,0]}>
-                  <LabelList dataKey="Élec (kWh)" position="top" style={{fontSize:9,fill:T.textSoft}}/>
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -452,7 +539,10 @@ export default function Dashboard() {
             </div>
             <h3 style={{ margin:0, fontSize:13, fontWeight:700, color:T.text }}>Dernières alertes</h3>
           </div>
-          <span style={{ fontSize:12, color:T.primary, cursor:'pointer', fontWeight:600 }}>Voir tout →</span>
+          <span 
+            onClick={() => navigate('/alertes')}
+            style={{ fontSize:12, color:T.primary, cursor:'pointer', fontWeight:600 }}
+          >Voir tout →</span>
         </div>
         {alertes.length > 0 ? (
           <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(auto-fill, minmax(300px, 1fr))', gap:'0 32px' }}>

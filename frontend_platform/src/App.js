@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import MaintenancePredictive from './pages/maintenance/MaintenancePredictive';
 
 // Pages
 import SplashScreen    from './pages/SplashScreen';
 import Login           from './pages/auth/Login';
 import Dashboard       from './pages/dashboard/Dashboard';
 import SaisieEnergie   from './pages/saisie/SaisieEnergie';
-import SaisieQualite   from './pages/saisie/SaisieQualite';
 import Alertes         from './pages/alertes/Alertes';
 import EnergieAccueil  from './pages/energie/EnergieAccueil';
 import QualiteAccueil  from './pages/qualite/QualiteAccueil';
@@ -17,6 +17,10 @@ import SaisiePointage  from './pages/pointage/SaisiePointage';
 
 // Layout
 import Layout from './components/layout/Layout';
+
+import DataQualite      from './pages/qualite/DataQualite';
+import AffichageQualite from './pages/qualite/AffichageQualite';
+import AnalyseQualite   from './pages/qualite/AnalyseQualite';
 
 // Rôles
 const TOUS     = ['contremaitre', 'chef_atelier', 'manager'];
@@ -69,13 +73,14 @@ function AppRoutes() {
         <Route path="qualite" element={
           <PrivateRoute roles={TOUS}><QualiteAccueil /></PrivateRoute>
         } />
-        <Route path="qualite/releves" element={
-          <PrivateRoute roles={TOUS}><SaisieQualite /></PrivateRoute>
+        <Route path="qualite/data" element={
+          <PrivateRoute roles={TOUS}><DataQualite /></PrivateRoute>
+        } />
+        <Route path="qualite/affichage" element={
+          <PrivateRoute roles={TOUS}><AffichageQualite /></PrivateRoute>
         } />
         <Route path="qualite/analyse" element={
-          <PrivateRoute roles={TOUS}>
-            <div style={{padding:32}}>Analyse Qualité — bientôt</div>
-          </PrivateRoute>
+          <PrivateRoute roles={TOUS}><AnalyseQualite /></PrivateRoute>
         } />
 
         {/* Pointage — tous */}
@@ -86,6 +91,11 @@ function AppRoutes() {
         {/* Alertes — tous */}
         <Route path="alertes" element={
           <PrivateRoute roles={TOUS}><Alertes /></PrivateRoute>
+        } />
+
+        {/* Maintenance Prédictive IA — tous */}
+        <Route path="maintenance" element={
+          <PrivateRoute roles={TOUS}><MaintenancePredictive /></PrivateRoute>
         } />
 
         {/* Administration — manager seulement */}

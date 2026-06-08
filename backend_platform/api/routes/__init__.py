@@ -11,3 +11,6 @@ from .pointages    import router as pointages_router
 # from .rh_salaires import router as salaires_router # EN ATTENTE
 
 # from .analyse     import router as analyse_router  # EN ATTENTE
+
+# ── MODULE IA — MAINTENANCE PRÉDICTIVE ───────────────────
+from .maintenance  import router as maintenance_router

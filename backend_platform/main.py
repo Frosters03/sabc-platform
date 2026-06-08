@@ -9,6 +9,7 @@ from api.routes import (
     alertes_router,
     equipes_router,
     pointages_router,
+    maintenance_router,
 )
 
 # ── Création de l'application ─────────────────────────────
@@ -81,6 +82,9 @@ app.include_router(alertes_router,   prefix="/api")
 # ── Module RH ─────────────────────────────────────────────
 app.include_router(equipes_router,   prefix="/api")
 app.include_router(pointages_router, prefix="/api")
+
+# ── Module IA — Maintenance Prédictive ───────────────────
+app.include_router(maintenance_router)  # prefix déjà défini dans le router
 
 # app.include_router(rh_router, prefix="/api")  # EN ATTENTE
 

@@ -68,29 +68,70 @@ class Resume24h(BaseModel):
     ratio_elec_jour:     Optional[float] = None   # kWh/hl
     ratio_co2_jour:      Optional[float] = None   # kg/hl
 
-# ─── QUALITÉ ──────────────────────────────────────────────
+# ─── QUALITÉ AM / BRSA ────────────────────────────────────
 
 class QualiteCreate(BaseModel):
-    """Ce que l'opérateur envoie pour un relevé qualité"""
     date:            date
     heure:           str
     quart:           str
     atelier:         str
+    type_volet:      Optional[str]   = 'AM'   # AM / BRSA
+    produit:         Optional[str]   = None
     sertissage_data: Optional[str]   = None
-    # JSON — nombre de cases selon atelier :
-    # Chaîne 15 et 16 → 24 cases
-    # Chaîne 8        → 20 cases
-    # Chaîne 14       → 16 cases
-    brix:            Optional[float] = None   # °
-    co2_qualite:     Optional[float] = None   # g/L
-    bo2:             Optional[float] = None   # mg/L
+    brix:            Optional[float] = None
+    co2_qualite:     Optional[float] = None
+    bo2:             Optional[float] = None
 
 class QualiteResponse(QualiteCreate):
-    """Ce qu'on renvoie après enregistrement"""
     id:         int
     saisi_par:  Optional[str]      = None
     created_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
 
+# ─── QUALITÉ VOLET A (Bière alcoolisée sortie soutireuse) ─
+
+class QualiteACreate(BaseModel):
+    date:    date
+    heure:   str
+    quart:   str
+    atelier: str
+    produit: Optional[str]   = None
+
+    # Densité (Extrait Primitif) — cible ~14.40 ±0.30
+    densite_valeur:  Optional[float] = None
+    densite_ecart:   Optional[float] = None
+
+    # Saturation (Carbonatation CO2) — cible ~4.90 ±0.30
+    saturation_valeur:       Optional[float] = None
+    saturation_ecart:        Optional[float] = None
+    saturation_pression:     Optional[float] = None
+    saturation_temperature:  Optional[float] = None
+    saturation_air_total:    Optional[float] = None
+
+    # O2 dissous — LS : 0.09 mg/L
+    o2_dissous:   Optional[float] = None
+
+    # Gaz étranger — LS : 1.0 vol
+    gaz_etranger: Optional[float] = None
+
+    # Bilan Oxygène — LS : 0.15 mg/L
+    bilan_o2_total:     Optional[float] = None
+    bilan_o2_col:       Optional[float] = None
+    bilan_o2_reprise:   Optional[float] = None
+    bilan_o2_bln:       Optional[float] = None
+    bilan_o2_es:        Optional[float] = None
+    pression_pissette:  Optional[float] = None
+    contre_pression:    Optional[float] = None
+    cadence_soutireuse: Optional[float] = None
+    debit_co2_balayage: Optional[float] = None
+
+    sertissage_data: Optional[str] = None
+
+class QualiteAResponse(QualiteACreate):
+    id:         int
+    saisi_par:  Optional[str]      = None
+    created_at: Optional[datetime] = None
     class Config:
         from_attributes = True
 

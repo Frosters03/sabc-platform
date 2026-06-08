@@ -10,6 +10,8 @@ class Qualite(Base):
     heure           = Column(String(10), nullable=False)
     quart           = Column(String(20), nullable=False)
     atelier         = Column(String(50), nullable=False)
+    type_volet      = Column(String(10), nullable=True, default='AM')
+    produit         = Column(String(50), nullable=True)
     sertissage_data = Column(Text, nullable=True)
     # Stocké en JSON — ex: "[1.2, 1.3, 1.1, ...]"
     # Nombre de cases selon atelier :

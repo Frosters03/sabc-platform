@@ -14,6 +14,7 @@ const IconLightMode = ({size=20,color='currentColor'}) => <svg width={size} heig
 const IconAdmin     = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>;
 const IconFactory   = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M4 18v-3.31L8 12v2.5l4-2.5v2.5l4-2.5V18H4zm0-5.5V4h16v8.5l-4 2.5V13l-4 2.5V13l-4 2.5z"/></svg>;
 const IconClipboard = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>;
+const IconBrain = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>;
 
 // ── CONTEXTE THEME ────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, toggle: () => {} });
@@ -73,6 +74,7 @@ function useNavItems() {
     items.push({ path:'/qualite',  icon:IconScience,   label:'Qualité' });
     items.push({ path:'/pointage', icon:IconClipboard, label:'Pointage' });
     items.push({ path:'/alertes',  icon:IconBell,      label:'Alertes' });
+    items.push({ path:'/maintenance', icon:IconBrain,  label:'Maintenance IA' });
   }
   if (hasRole('manager')) {
     items.push({ path:'/admin/users', icon:IconAdmin,  label:'Administration' });
@@ -95,7 +97,7 @@ function Sidebar({ items, T }) {
   return (
     <div style={{
       width: 240,
-      minHeight: '100vh',
+      height: '100vh',
       background: T.sidebar,
       borderRight: `1px solid ${T.border}`,
       display: 'flex',
@@ -544,9 +546,11 @@ const pageTitles = {
   '/energie/releves':     'Relevés Énergie',
   '/energie/analyse':     'Analyse Énergie',
   '/qualite':             'Qualité',
-  '/qualite/releves':     'Relevés Qualité',
-  '/qualite/analyse':     'Analyse Qualité',
+  '/qualite/data':        'Data — Saisie Qualité',       // ← ajouter
+  '/qualite/affichage':   'Affichage — Cartes SPC',      // ← ajouter
+  '/qualite/analyse':     'Analyse Qualité', 
   '/alertes':             'Alertes',
+  '/maintenance': 'Maintenance Prédictive IA',
   '/admin/users':         'Administration',
   '/pointage': 'Pointage Personnel',
 };

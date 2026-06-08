@@ -5,11 +5,16 @@ from datetime import date, datetime
 # ── ÉQUIPE ────────────────────────────────────────────────
 
 class MembreCreate(BaseModel):
-    fonction:   str
-    nom_prenom: str
-    matricule:  Optional[str] = None
-    statut:     str = "titulaire"
-    ordre:      int = 0
+    fonction:           str
+    nom_prenom:         str
+    matricule:          Optional[str] = None
+    statut:             str = "titulaire"
+    ordre:              int = 0
+    date_naissance:     Optional[str] = None
+    lieu_naissance:     Optional[str] = None
+    cnps:               Optional[str] = None
+    categorie_pro:      Optional[str] = None
+    salaire_horaire:    Optional[float] = None
 
 class MembreResponse(MembreCreate):
     id:        int
