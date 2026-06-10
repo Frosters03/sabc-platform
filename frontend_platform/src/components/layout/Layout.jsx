@@ -395,20 +395,7 @@ function BottomNavbar({ items, T }) {
         );
       })}
 
-      {/* Toggle mode */}
-      <button
-        onClick={toggle}
-        style={{
-          display:'flex', flexDirection:'column', alignItems:'center',
-          background:'none', border:'none', cursor:'pointer',
-          padding:'4px 8px', color:T.textSoft,
-        }}
-      >
-        {dark ? <IconLightMode size={22} color={T.textSoft}/> : <IconDarkMode size={22} color={T.textSoft}/>}
-        <span style={{ fontSize:10, marginTop:3, color:T.textSoft }}>
-          {dark ? 'Clair' : 'Sombre'}
-        </span>
-      </button>
+      
     </div>
   );
 }
