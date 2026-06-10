@@ -539,6 +539,32 @@ function BottomNavbar({ items, T }) {
   );
 }
 
+{/* Dans l'en-tête mobile, à droite */}
+<div style={{ display:'flex', gap:8, alignItems:'center' }}>
+  
+  {/* Bouton Administration (si rôle manager) */}
+  {user?.role === 'manager' && (
+    <button onClick={() => navigate('/administration')}
+      style={{
+        background:'none', border:`1px solid ${T.border}`,
+        borderRadius:8, padding:'6px 10px',
+        fontSize:11, color:T.textSoft, cursor:'pointer'
+      }}>
+      ⚙️ Admin
+    </button>
+  )}
+
+  {/* Bouton Déconnexion */}
+  <button onClick={logout}
+    style={{
+      background:'none', border:`1px solid ${T.border}`,
+      borderRadius:8, padding:'6px 10px',
+      fontSize:11, color:'#EF4444', cursor:'pointer'
+    }}>
+    ⏻
+  </button>
+</div>
+
 // ── PAGE TITLES ───────────────────────────────────────────
 const pageTitles = {
   '/dashboard':           'Tableau de bord',

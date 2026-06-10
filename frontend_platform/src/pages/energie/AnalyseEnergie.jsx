@@ -91,12 +91,12 @@ export default function AnalyseEnergie() {
         quart: c.quart,
         prod,
         nb,
-        ri:  parseFloat(c.index_eau_rincage) - parseFloat(p2.index_eau_rincage),
-        ba:  parseFloat(c.index_eau_bain)    - parseFloat(p2.index_eau_bain),
-        pa:  parseFloat(c.index_eau_pasteur) - parseFloat(p2.index_eau_pasteur),
-        ae:  parseFloat(c.index_eau_aero)    - parseFloat(p2.index_eau_aero),
-        el:  parseFloat(c.index_elec)        - parseFloat(p2.index_elec),
-        co:  parseFloat(c.index_co2)         - parseFloat(p2.index_co2),
+        ri: Math.max(0, parseFloat(c.index_eau_rincage) - parseFloat(p2.index_eau_rincage)),
+        ba: Math.max(0, parseFloat(c.index_eau_bain)    - parseFloat(p2.index_eau_bain)),
+        pa: Math.max(0, parseFloat(c.index_eau_pasteur) - parseFloat(p2.index_eau_pasteur)),
+        ae: Math.max(0, parseFloat(c.index_eau_aero)    - parseFloat(p2.index_eau_aero)),
+        el: Math.max(0, parseFloat(c.index_elec)        - parseFloat(p2.index_elec)),
+        co: Math.max(0, parseFloat(c.index_co2)         - parseFloat(p2.index_co2)),
       });
     }
 
@@ -361,73 +361,80 @@ export default function AnalyseEnergie() {
     const moy = rows.reduce((a,b)=>a+b[dataKey],0)/rows.length;
     const chartData = rows.map(r=>({...r, moyenne:+moy.toFixed(3)}));
     return (
-      <ResponsiveContainer width="100%" height={240} minWidth={rows.length * 60}>
-        <ComposedChart data={chartData} margin={{top:10,right:60,left:0,bottom:50}} barCategoryGap="10%">
-          <CartesianGrid strokeDasharray="3 3" stroke={T2.border} />
-          <XAxis
-            dataKey="labelCourt"
-            tick={{fontSize:9, fill:T2.textSoft}}
-            angle={-40}
-            textAnchor="end"
-            interval={0}
-          />
-          <YAxis
-            tick={{fontSize:10, fill:T2.textSoft}}
-            label={{
-              value: yLabel,
-              angle: -90,
-              position: 'insideLeft',
-              style: {fontSize:10, fill:T2.textSoft}
-            }}
-          />
-          <Tooltip
-            contentStyle={{
-              background:T2.card,
-              border:`1px solid ${T2.border}`,
-              borderRadius:8,
-              color:T2.text,
-              fontSize:11
-            }}
-          />
-          <Legend wrapperStyle={{fontSize:11, color:T2.textSoft, paddingTop:8}}/>
-          {refs.map(r=>(
-            <ReferenceLine
-              key={r.val}
-              y={r.val}
-              stroke={r.color}
-              strokeWidth={2}
-              strokeDasharray="0"
-              label={{
-                value: `${r.label}`,
-                position: 'right',
-                fontSize: 11,
-                fontWeight: 700,
-                fill: r.color,
-              }}
-            />
-          ))}
-          <Bar dataKey={dataKey} name="Valeur" radius={[4,4,0,0]} barSize={22}>
-            <LabelList dataKey={dataKey} position="top" style={{fontSize:9, fill:T2.textSoft}}/>
-            {rows.map((r,i)=>(
-              <Cell key={i} fill={colorFn ? colorFn(r[dataKey]) : '#DA291C'}/>
-            ))}
-            <LabelList
-              dataKey={dataKey}
-              position="top"
-              style={{ fontSize: 9, fill: T2.textSoft, fontWeight: 600 }}
-            />
-          </Bar>
-          <Line
-            dataKey="moyenne"
-            name="Moyenne"
-            type="monotone"
-            stroke="#F5A623"
-            strokeWidth={2}
-            dot={false}
-            strokeDasharray="4 2"
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ minWidth: Math.max(rows.length * 55, 320), height: 240 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart 
+              data={chartData} 
+              margin={{ top:10, right:50, left:0, bottom:50 }} 
+              barCategoryGap="10%"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke={T2.border} />
+              <XAxis
+                dataKey="labelCourt"
+                tick={{ fontSize:9, fill:T2.textSoft }}
+                angle={-40}
+                textAnchor="end"
+                interval={0}
+              />
+              <YAxis
+                tick={{ fontSize:10, fill:T2.textSoft }}
+                label={{
+                  value: yLabel,
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fontSize:10, fill:T2.textSoft }
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  background:T2.card,
+                  border:`1px solid ${T2.border}`,
+                  borderRadius:8,
+                  color:T2.text,
+                  fontSize:11
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize:11, color:T2.textSoft, paddingTop:8 }}/>
+              {refs.map(r=>(
+                <ReferenceLine
+                  key={r.val}
+                  y={r.val}
+                  stroke={r.color}
+                  strokeWidth={2}
+                  strokeDasharray="0"
+                  label={{
+                    value: r.label,
+                    position: 'right',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    fill: r.color,
+                  }}
+                />
+              ))}
+              <Bar dataKey={dataKey} name="Valeur" radius={[4,4,0,0]} barSize={22}>
+                <LabelList 
+                  dataKey={dataKey} 
+                  position="top" 
+                  style={{ fontSize:9, fill:T2.textSoft, fontWeight:600 }}
+                />
+                {rows.map((r,i)=>(
+                  <Cell key={i} fill={colorFn ? colorFn(r[dataKey]) : '#DA291C'}/>
+                ))}
+              </Bar>
+              <Line
+                dataKey="moyenne"
+                name="Moyenne"
+                type="monotone"
+                stroke="#F5A623"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="4 2"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     );
   }
 
