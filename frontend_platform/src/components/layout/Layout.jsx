@@ -14,7 +14,7 @@ const IconLightMode = ({size=20,color='currentColor'}) => <svg width={size} heig
 const IconAdmin     = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>;
 const IconFactory   = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M4 18v-3.31L8 12v2.5l4-2.5v2.5l4-2.5V18H4zm0-5.5V4h16v8.5l-4 2.5V13l-4 2.5V13l-4 2.5z"/></svg>;
 const IconClipboard = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>;
-const IconBrain = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>;
+const IconBrain     = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>;
 
 // ── CONTEXTE THEME ────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, toggle: () => {} });
@@ -47,20 +47,17 @@ export const getTheme = (dark) => ({
 // ── DETECTION MOBILE ──────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => {
-    return window.innerWidth < 768 || 
+    return window.innerWidth < 768 ||
            /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   });
-  
   useEffect(() => {
     const handle = () => setIsMobile(
-      window.innerWidth < 768 || 
+      window.innerWidth < 768 ||
       /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     );
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
   }, []);
-  
-  
   return isMobile;
 }
 
@@ -68,25 +65,22 @@ function useIsMobile() {
 function useNavItems() {
   const { hasRole } = useAuth();
   const items = [];
-  items.push({ path:'/dashboard', icon:IconDashboard, label:'Tableau de bord' });
+  items.push({ path:'/dashboard',   icon:IconDashboard, label:'Tableau de bord' });
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
-    items.push({ path:'/energie',  icon:IconBolt,      label:'Énergie' });
-    items.push({ path:'/qualite',  icon:IconScience,   label:'Qualité' });
-    items.push({ path:'/pointage', icon:IconClipboard, label:'Pointage' });
-    items.push({ path:'/alertes',  icon:IconBell,      label:'Alertes' });
-    items.push({ path:'/maintenance', icon:IconBrain,  label:'Maintenance IA' });
-  }
-  if (hasRole('manager')) {
-    items.push({ path:'/admin/users', icon:IconAdmin,  label:'Administration' });
+    items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
+    items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
+    items.push({ path:'/pointage',    icon:IconClipboard, label:'Pointage' });
+    items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes' });
+    items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA' });
   }
   return items;
 }
 
 // ── SIDEBAR PC ────────────────────────────────────────────
 function Sidebar({ items, T }) {
-  const navigate        = useNavigate();
-  const location        = useLocation();
-  const { logout, user } = useAuth();
+  const navigate         = useNavigate();
+  const location         = useLocation();
+  const { logout, user, hasRole } = useAuth();
 
   const roleLabel = {
     manager:      'Manager',
@@ -119,60 +113,30 @@ function Sidebar({ items, T }) {
         <img
           src="/images/logo_sabc.png"
           alt="SABC"
-          style={{
-            width: 100, height: 100,
-            objectFit: 'contain',
-            flexShrink: 0,
-          }}
+          style={{ width:100, height:100, objectFit:'contain', flexShrink:0 }}
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'flex';
           }}
         />
         <div style={{
-          width: 38, height: 38,
-          borderRadius: 10,
-          background: T.primary,
-          display: 'none',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
+          width:38, height:38, borderRadius:10,
+          background: T.primary, display:'none',
+          alignItems:'center', justifyContent:'center', flexShrink:0,
         }}>
           <IconFactory size={22} color="#fff" />
         </div>
-
         <div>
-          <div style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: T.text,
-            letterSpacing: 0.5,
-          }}>
-            SABC
-          </div>
-          <div style={{
-            fontSize: 10,
-            color: T.textSoft,
-            marginTop: 1,
-          }}>
-            Packaging Platform
-          </div>
+          <div style={{ fontSize:15, fontWeight:700, color:T.text, letterSpacing:0.5 }}>SABC</div>
+          <div style={{ fontSize:10, color:T.textSoft, marginTop:1 }}>Packaging Platform</div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{
-        flex: 1,
-        padding: '20px 12px',
-        overflowY: 'auto',
-      }}>
+      <nav style={{ flex:1, padding:'20px 12px', overflowY:'auto' }}>
         <div style={{
-          fontSize: 10,
-          color: T.textMuted,
-          fontWeight: 700,
-          letterSpacing: 1.2,
-          padding: '0 10px 10px',
-          textTransform: 'uppercase',
+          fontSize:10, color:T.textMuted, fontWeight:700,
+          letterSpacing:1.2, padding:'0 10px 10px', textTransform:'uppercase',
         }}>
           Navigation
         </div>
@@ -185,20 +149,12 @@ function Sidebar({ items, T }) {
               key={item.path}
               onClick={() => navigate(item.path)}
               style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
-                marginBottom: 3,
+                width:'100%', display:'flex', alignItems:'center', gap:12,
+                padding:'10px 12px', marginBottom:3,
                 background: active ? T.sidebarActiveBg : 'transparent',
-                border: active
-                  ? '1px solid rgba(218,41,28,0.2)'
-                  : '1px solid transparent',
-                borderRadius: 10,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.15s',
+                border: active ? '1px solid rgba(218,41,28,0.2)' : '1px solid transparent',
+                borderRadius:10, cursor:'pointer', textAlign:'left',
+                transition:'all 0.15s',
                 color: active ? T.primary : T.textSoft,
               }}
               onMouseEnter={(e) => {
@@ -215,76 +171,77 @@ function Sidebar({ items, T }) {
               }}
             >
               <div style={{
-                width: 32, height: 32,
-                borderRadius: 8,
+                width:32, height:32, borderRadius:8,
                 background: active ? 'rgba(218,41,28,0.12)' : T.borderSoft,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                color: active ? T.primary : T.textSoft,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                flexShrink:0,
               }}>
                 <NavIcon size={18} color={active ? T.primary : T.textSoft} />
               </div>
-              <span style={{
-                fontSize: 13,
-                fontWeight: active ? 600 : 400,
-                color: active ? T.primary : T.textSoft,
-              }}>
+              <span style={{ fontSize:13, fontWeight: active ? 600 : 400, color: active ? T.primary : T.textSoft }}>
                 {item.label}
               </span>
               {active && (
                 <div style={{
-                  marginLeft: 'auto',
-                  width: 6, height: 6,
-                  borderRadius: '50%',
-                  background: T.primary,
-                  flexShrink: 0,
+                  marginLeft:'auto', width:6, height:6,
+                  borderRadius:'50%', background:T.primary, flexShrink:0,
                 }} />
               )}
             </button>
           );
         })}
+
+        {/* Administration — managers seulement */}
+        {hasRole('manager') && (() => {
+          const active = location.pathname.startsWith('/admin');
+          return (
+            <button
+              onClick={() => navigate('/admin/users')}
+              style={{
+                width:'100%', display:'flex', alignItems:'center', gap:12,
+                padding:'10px 12px', marginBottom:3,
+                background: active ? T.sidebarActiveBg : 'transparent',
+                border: active ? '1px solid rgba(218,41,28,0.2)' : '1px solid transparent',
+                borderRadius:10, cursor:'pointer', textAlign:'left',
+                transition:'all 0.15s',
+                color: active ? T.primary : T.textSoft,
+              }}
+            >
+              <div style={{
+                width:32, height:32, borderRadius:8,
+                background: active ? 'rgba(218,41,28,0.12)' : T.borderSoft,
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+              }}>
+                <IconAdmin size={18} color={active ? T.primary : T.textSoft} />
+              </div>
+              <span style={{ fontSize:13, fontWeight: active ? 600 : 400, color: active ? T.primary : T.textSoft }}>
+                Administration
+              </span>
+            </button>
+          );
+        })()}
       </nav>
 
       {/* Profil + Déco */}
-      <div style={{
-        padding: '12px',
-        borderTop: `1px solid ${T.border}`,
-      }}>
+      <div style={{ padding:'12px', borderTop:`1px solid ${T.border}` }}>
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 12px',
-          borderRadius: 10,
-          background: T.borderSoft,
-          marginBottom: 8,
+          display:'flex', alignItems:'center', gap:10,
+          padding:'10px 12px', borderRadius:10,
+          background:T.borderSoft, marginBottom:8,
         }}>
           <div style={{
-            width: 34, height: 34,
-            borderRadius: '50%',
-            background: 'rgba(218,41,28,0.1)',
-            border: '2px solid rgba(218,41,28,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            width:34, height:34, borderRadius:'50%',
+            background:'rgba(218,41,28,0.1)',
+            border:'2px solid rgba(218,41,28,0.2)',
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
           }}>
             <IconPerson size={18} color={T.primary} />
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: T.text,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
+          <div style={{ overflow:'hidden' }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
               {user?.username}
             </div>
-            <div style={{ fontSize: 10, color: T.textSoft }}>
+            <div style={{ fontSize:10, color:T.textSoft }}>
               {roleLabel[user?.role] || user?.role}
             </div>
           </div>
@@ -293,20 +250,11 @@ function Sidebar({ items, T }) {
         <button
           onClick={() => { if (window.confirm('Se déconnecter ?')) logout(); }}
           style={{
-            width: '100%',
-            padding: '9px 12px',
-            background: 'transparent',
-            border: `1px solid ${T.border}`,
-            borderRadius: 10,
-            color: T.danger,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            transition: 'all 0.15s',
+            width:'100%', padding:'9px 12px',
+            background:'transparent', border:`1px solid ${T.border}`,
+            borderRadius:10, color:T.danger, fontSize:12, fontWeight:600,
+            cursor:'pointer', display:'flex', alignItems:'center',
+            justifyContent:'center', gap:8, transition:'all 0.15s',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = '#FEF2F2';
@@ -330,8 +278,7 @@ function Header({ T, dark, toggleDark, title }) {
   const { user } = useAuth();
   const now      = new Date();
   const dateStr  = now.toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric',
-    month: 'long', year: 'numeric',
+    weekday:'long', day:'numeric', month:'long', year:'numeric',
   });
   const roleLabel = {
     manager:      'Manager',
@@ -341,102 +288,56 @@ function Header({ T, dark, toggleDark, title }) {
 
   return (
     <div style={{
-      height: 64,
-      background: T.header,
-      borderBottom: `1px solid ${T.border}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 28px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-      transition: 'background 0.3s',
+      height:64, background:T.header, borderBottom:`1px solid ${T.border}`,
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'0 28px', position:'sticky', top:0, zIndex:50,
+      transition:'background 0.3s',
     }}>
       <div>
-        <h2 style={{
-          fontSize: 16,
-          fontWeight: 700,
-          color: T.text,
-          margin: 0,
-          letterSpacing: 0.3,
-        }}>
+        <h2 style={{ fontSize:16, fontWeight:700, color:T.text, margin:0, letterSpacing:0.3 }}>
           {title}
         </h2>
-        <p style={{
-          fontSize: 11,
-          color: T.textSoft,
-          margin: 0,
-          textTransform: 'capitalize',
-        }}>
+        <p style={{ fontSize:11, color:T.textSoft, margin:0, textTransform:'capitalize' }}>
           {dateStr}
         </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-
-        {/* Toggle dark */}
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
         <button
           onClick={toggleDark}
           title={dark ? 'Mode clair' : 'Mode sombre'}
           style={{
-            width: 36, height: 36,
-            borderRadius: 10,
-            background: T.borderSoft,
-            border: `1px solid ${T.border}`,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: T.textSoft,
-            transition: 'all 0.2s',
+            width:36, height:36, borderRadius:10,
+            background:T.borderSoft, border:`1px solid ${T.border}`,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+            color:T.textSoft, transition:'all 0.2s',
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = T.border;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = T.borderSoft;
-          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = T.border}
+          onMouseLeave={(e) => e.currentTarget.style.background = T.borderSoft}
         >
-          {dark
-            ? <IconLightMode size={18} color={T.textSoft} />
-            : <IconDarkMode  size={18} color={T.textSoft} />
-          }
+          {dark ? <IconLightMode size={18} color={T.textSoft}/> : <IconDarkMode size={18} color={T.textSoft}/>}
         </button>
 
-        <div style={{ width: 1, height: 28, background: T.border }} />
+        <div style={{ width:1, height:28, background:T.border }} />
 
-        {/* Profil */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '6px 12px',
-          borderRadius: 10,
-          background: T.borderSoft,
-          border: `1px solid ${T.border}`,
+          display:'flex', alignItems:'center', gap:10,
+          padding:'6px 12px', borderRadius:10,
+          background:T.borderSoft, border:`1px solid ${T.border}`,
         }}>
           <div style={{
-            width: 30, height: 30,
-            borderRadius: '50%',
-            background: 'rgba(218,41,28,0.1)',
-            border: '2px solid rgba(218,41,28,0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width:30, height:30, borderRadius:'50%',
+            background:'rgba(218,41,28,0.1)',
+            border:'2px solid rgba(218,41,28,0.25)',
+            display:'flex', alignItems:'center', justifyContent:'center',
           }}>
             <IconPerson size={16} color={T.primary} />
           </div>
           <div>
-            <div style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: T.text,
-              lineHeight: 1.2,
-            }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.text, lineHeight:1.2 }}>
               {user?.username}
             </div>
-            <div style={{ fontSize: 10, color: T.textSoft }}>
+            <div style={{ fontSize:10, color:T.textSoft }}>
               {roleLabel[user?.role] || user?.role}
             </div>
           </div>
@@ -448,23 +349,17 @@ function Header({ T, dark, toggleDark, title }) {
 
 // ── BOTTOM NAVBAR MOBILE ──────────────────────────────────
 function BottomNavbar({ items, T }) {
-  const navigate        = useNavigate();
-  const location        = useLocation();
-  const { logout, user } = useAuth();
+  const navigate     = useNavigate();
+  const location     = useLocation();
   const { dark, toggle } = useTheme();
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: 0, left: 0, right: 0,
-      background: T.card,
-      borderTop: `1px solid ${T.border}`,
-      display: 'flex',
-      justifyContent: 'space-around',
-      alignItems: 'center',
-      padding: '6px 0 12px',
-      zIndex: 1000,
-      boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      position:'fixed', bottom:0, left:0, right:0,
+      background:T.card, borderTop:`1px solid ${T.border}`,
+      display:'flex', justifyContent:'space-around', alignItems:'center',
+      padding:'6px 0 12px', zIndex:1000,
+      boxShadow:'0 -4px 24px rgba(0,0,0,0.07)',
     }}>
       {items.map((item) => {
         const active  = location.pathname === item.path;
@@ -474,36 +369,25 @@ function BottomNavbar({ items, T }) {
             key={item.path}
             onClick={() => navigate(item.path)}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 12px',
+              display:'flex', flexDirection:'column', alignItems:'center',
+              background:'none', border:'none', cursor:'pointer',
+              padding:'4px 8px',
               color: active ? T.primary : T.textSoft,
-              position: 'relative',
+              position:'relative',
             }}
           >
             {active && (
               <div style={{
-                position: 'absolute',
-                top: -6, left: '50%',
-                transform: 'translateX(-50%)',
-                width: 28, height: 3,
-                background: T.primary,
-                borderRadius: '0 0 4px 4px',
+                position:'absolute', top:-6, left:'50%',
+                transform:'translateX(-50%)',
+                width:28, height:3,
+                background:T.primary, borderRadius:'0 0 4px 4px',
               }} />
             )}
-            <NavIcon
-              size={22}
-              color={active ? T.primary : T.textSoft}
-            />
+            <NavIcon size={22} color={active ? T.primary : T.textSoft} />
             <span style={{
-              fontSize: 10,
-              fontWeight: active ? 700 : 400,
-              marginTop: 3,
-              color: active ? T.primary : T.textSoft,
+              fontSize:10, fontWeight: active ? 700 : 400,
+              marginTop:3, color: active ? T.primary : T.textSoft,
             }}>
               {item.label}
             </span>
@@ -515,74 +399,24 @@ function BottomNavbar({ items, T }) {
       <button
         onClick={toggle}
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '4px 12px',
-          color: T.textSoft,
+          display:'flex', flexDirection:'column', alignItems:'center',
+          background:'none', border:'none', cursor:'pointer',
+          padding:'4px 8px', color:T.textSoft,
         }}
       >
-        {dark
-          ? <IconLightMode size={22} color={T.textSoft} />
-          : <IconDarkMode  size={22} color={T.textSoft} />
-        }
-        <span style={{ fontSize: 10, marginTop: 3, color: T.textSoft }}>
+        {dark ? <IconLightMode size={22} color={T.textSoft}/> : <IconDarkMode size={22} color={T.textSoft}/>}
+        <span style={{ fontSize:10, marginTop:3, color:T.textSoft }}>
           {dark ? 'Clair' : 'Sombre'}
         </span>
       </button>
-
-    
     </div>
   );
 }
 
-{/* Dans l'en-tête mobile, à droite */}
-<div style={{ display:'flex', gap:8, alignItems:'center' }}>
-  
-  {/* Bouton Administration (si rôle manager) */}
-  {user?.role === 'manager' && (
-    <button onClick={() => navigate('/administration')}
-      style={{
-        background:'none', border:`1px solid ${T.border}`,
-        borderRadius:8, padding:'6px 10px',
-        fontSize:11, color:T.textSoft, cursor:'pointer'
-      }}>
-      ⚙️ Admin
-    </button>
-  )}
-
-  {/* Bouton Déconnexion */}
-  <button onClick={logout}
-    style={{
-      background:'none', border:`1px solid ${T.border}`,
-      borderRadius:8, padding:'6px 10px',
-      fontSize:11, color:'#EF4444', cursor:'pointer'
-    }}>
-    ⏻
-  </button>
-</div>
-
-// ── PAGE TITLES ───────────────────────────────────────────
-const pageTitles = {
-  '/dashboard':           'Tableau de bord',
-  '/energie':             'Énergie',
-  '/energie/releves':     'Relevés Énergie',
-  '/energie/analyse':     'Analyse Énergie',
-  '/qualite':             'Qualité',
-  '/qualite/data':        'Data — Saisie Qualité',       // ← ajouter
-  '/qualite/affichage':   'Affichage — Cartes SPC',      // ← ajouter
-  '/qualite/analyse':     'Analyse Qualité', 
-  '/alertes':             'Alertes',
-  '/maintenance': 'Maintenance Prédictive IA',
-  '/admin/users':         'Administration',
-  '/pointage': 'Pointage Personnel',
-};
-
+// ── HEADER MOBILE ─────────────────────────────────────────
 function MobileHeader({ T, dark, toggleDark, title }) {
-  const { logout, user } = useAuth();
+  const { logout, user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const roleLabel = {
@@ -594,10 +428,10 @@ function MobileHeader({ T, dark, toggleDark, title }) {
   return (
     <>
       <div style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: T.header, borderBottom: `1px solid ${T.border}`,
-        padding: '10px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position:'sticky', top:0, zIndex:50,
+        background:T.header, borderBottom:`1px solid ${T.border}`,
+        padding:'10px 16px',
+        display:'flex', alignItems:'center', justifyContent:'space-between',
       }}>
         {/* Logo + titre */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -623,10 +457,7 @@ function MobileHeader({ T, dark, toggleDark, title }) {
             background:T.borderSoft, border:`1px solid ${T.border}`,
             cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
           }}>
-            {dark
-              ? <IconLightMode size={17} color={T.textSoft}/>
-              : <IconDarkMode  size={17} color={T.textSoft}/>
-            }
+            {dark ? <IconLightMode size={17} color={T.textSoft}/> : <IconDarkMode size={17} color={T.textSoft}/>}
           </button>
 
           {/* Avatar — ouvre menu profil */}
@@ -646,22 +477,19 @@ function MobileHeader({ T, dark, toggleDark, title }) {
       {menuOpen && (
         <>
           {/* Overlay */}
-          <div
-            onClick={() => setMenuOpen(false)}
-            style={{ position:'fixed', inset:0, zIndex:98 }}
-          />
+          <div onClick={() => setMenuOpen(false)} style={{ position:'fixed', inset:0, zIndex:98 }} />
+
           {/* Menu */}
           <div style={{
             position:'fixed', top:64, right:12,
             background:T.card, border:`1px solid ${T.border}`,
             borderRadius:14, padding:16, zIndex:99,
-            minWidth:200, boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
+            minWidth:210, boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
           }}>
             {/* Infos utilisateur */}
             <div style={{
               display:'flex', alignItems:'center', gap:10,
-              paddingBottom:12, borderBottom:`1px solid ${T.border}`,
-              marginBottom:12,
+              paddingBottom:12, borderBottom:`1px solid ${T.border}`, marginBottom:12,
             }}>
               <div style={{
                 width:38, height:38, borderRadius:'50%',
@@ -678,7 +506,24 @@ function MobileHeader({ T, dark, toggleDark, title }) {
               </div>
             </div>
 
-            {/* Bouton déconnexion */}
+            {/* Bouton Administration — managers seulement */}
+            {hasRole('manager') && (
+              <button
+                onClick={() => { navigate('/admin/users'); setMenuOpen(false); }}
+                style={{
+                  width:'100%', padding:'9px 12px', marginBottom:8,
+                  background:'transparent', border:`1px solid ${T.border}`,
+                  borderRadius:10, color:T.text,
+                  fontSize:13, fontWeight:600, cursor:'pointer',
+                  display:'flex', alignItems:'center', gap:8,
+                }}
+              >
+                <IconAdmin size={16} color={T.textSoft}/>
+                Administration
+              </button>
+            )}
+
+            {/* Bouton Déconnexion */}
             <button
               onClick={() => { if(window.confirm('Se déconnecter ?')) logout(); }}
               style={{
@@ -699,6 +544,22 @@ function MobileHeader({ T, dark, toggleDark, title }) {
   );
 }
 
+// ── PAGE TITLES ───────────────────────────────────────────
+const pageTitles = {
+  '/dashboard':         'Tableau de bord',
+  '/energie':           'Énergie',
+  '/energie/releves':   'Relevés Énergie',
+  '/energie/analyse':   'Analyse Énergie',
+  '/qualite':           'Qualité',
+  '/qualite/data':      'Saisie Qualité',
+  '/qualite/affichage': 'Cartes SPC',
+  '/qualite/analyse':   'Analyse Qualité',
+  '/alertes':           'Alertes',
+  '/maintenance':       'Maintenance Prédictive IA',
+  '/admin/users':       'Administration',
+  '/pointage':          'Pointage Personnel',
+};
+
 // ── LAYOUT PRINCIPAL ──────────────────────────────────────
 export default function Layout() {
   const isMobile = useIsMobile();
@@ -707,6 +568,7 @@ export default function Layout() {
   const [dark, setDark] = useState(
     () => localStorage.getItem('sabc_dark') === 'true'
   );
+
   useEffect(() => {
     document.body.style.background = dark ? '#0F172A' : '#F1F5F9';
     document.documentElement.style.background = dark ? '#0F172A' : '#F1F5F9';
@@ -726,90 +588,33 @@ export default function Layout() {
   return (
     <ThemeContext.Provider value={{ dark, toggle: toggleDark, T }}>
       <div style={{
-        background: T.bg,
-        minHeight: '100vh',
-        transition: 'background 0.3s',
-        overflowX: 'hidden',
-        maxWidth: '100vw',
+        background:T.bg, minHeight:'100vh',
+        transition:'background 0.3s',
+        overflowX:'hidden', maxWidth:'100vw',
       }}>
+        {/* Sidebar PC */}
         {!isMobile && <Sidebar items={items} T={T} />}
+
         {/* Header mobile */}
         {isMobile && (
-          <div style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 50,
-            background: T.header,
-            borderBottom: `1px solid ${T.border}`,
-            padding: '10px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-          <div>
-            <h2 style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: T.text,
-              margin: 0,
-            }}>
-              {title}
-            </h2>
-            <p style={{
-              fontSize: 10,
-              color: T.textSoft,
-              margin: 0,
-              textTransform: 'capitalize',
-            }}>
-              {new Date().toLocaleDateString('fr-FR', {
-                weekday: 'long', day: 'numeric', month: 'long',
-              })}
-            </p>
-          </div>
-
-          {/* Toggle dark mode */}
-          <button
-            onClick={toggleDark}
-            style={{
-              width: 34, height: 34,
-              borderRadius: 10,
-              background: T.borderSoft,
-              border: `1px solid ${T.border}`,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: T.textSoft,
-            }}
-          >
-            {dark
-              ? <IconLightMode size={17} color={T.textSoft} />
-              : <IconDarkMode  size={17} color={T.textSoft} />
-            }
-          </button>
-        </div>
-      )}
+          <MobileHeader T={T} dark={dark} toggleDark={toggleDark} title={title} />
+        )}
 
         <div style={{
           marginLeft: isMobile ? 0 : 240,
           paddingBottom: isMobile ? 80 : 0,
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
+          minHeight:'100vh',
+          display:'flex', flexDirection:'column',
         }}>
           {!isMobile && (
-            <Header
-              T={T}
-              dark={dark}
-              toggleDark={toggleDark}
-              title={title}
-            />
+            <Header T={T} dark={dark} toggleDark={toggleDark} title={title} />
           )}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex:1 }}>
             <Outlet />
           </div>
         </div>
 
+        {/* Bottom navbar mobile */}
         {isMobile && <BottomNavbar items={items} T={T} />}
       </div>
     </ThemeContext.Provider>
