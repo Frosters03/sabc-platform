@@ -24,6 +24,8 @@ function nbBte(hl, atelier, format='65cl') {
 const CL = { vert:"#10B981", orange:"#F59E0B", rouge:"#EF4444" };
 function clLaveuse(v) { return v<=0.3?CL.vert:v<=0.6?CL.orange:CL.rouge; }
 function clPasto(v)   { return v<=1.5?CL.vert:v<=2.0?CL.orange:CL.rouge; }
+function clElec(v)    { return v<=2.0?CL.vert:v<=3.0?CL.orange:CL.rouge; }   // mêmes seuils que les alertes
+function clCo2(v)     { return v<=0.3?CL.vert:v<=0.8?CL.orange:CL.rouge; }
 
 // Différence d'index tolérante : 0 si une valeur manque (anciens relevés)
 function diffIdx(a, b) {
@@ -439,6 +441,7 @@ export default function AnalyseEnergie() {
   function CarteResume({ titre, stats, tendance, seuil, hors, total, unite, couleurFn }) {
     const T2 = useTheme().T;
     const cl = couleurFn ? couleurFn(stats.moy) : T2.primary;
+    const clMax = couleurFn ? couleurFn(stats.max) : CL.orange;   // le max prend la couleur de son niveau réel
     const icon = tendance==="hausse"?"↑":tendance==="baisse"?"↓":"→";
     const clIcon = tendance==="hausse"?CL.rouge:tendance==="baisse"?CL.vert:CL.orange;
     return (
@@ -455,7 +458,7 @@ export default function AnalyseEnergie() {
         </div>
         <div style={{display:'flex',gap:12,marginTop:8}}>
           <span style={{fontSize:11,color:T2.textSoft}}>Min <b style={{color:CL.vert}}>{stats.min}</b></span>
-          <span style={{fontSize:11,color:T2.textSoft}}>Max <b style={{color:CL.rouge}}>{stats.max}</b></span>
+          <span style={{fontSize:11,color:T2.textSoft}}>Max <b style={{color:clMax}}>{stats.max}</b></span>
           {hors!=null && <span style={{fontSize:11,color:hors>0?CL.rouge:CL.vert,fontWeight:700}}>{hors}/{total} hors seuil</span>}
         </div>
       </div>
@@ -713,8 +716,8 @@ export default function AnalyseEnergie() {
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14,marginBottom:24}}>
           <CarteResume titre="Eau laveuse"       stats={data.sLav}   tendance={data.tLav}   hors={data.horsLav}   total={data.rows.length} unite="L/bte"   couleurFn={clLaveuse}/>
           <CarteResume titre="Pasteurisateur"    stats={data.sPasto} tendance={data.tPasto} hors={data.horsPasto} total={data.rows.length} unite="m³/h"    couleurFn={clPasto}/>
-          <CarteResume titre="Électricité"       stats={data.sElec}  tendance={data.tElec}  hors={null}           total={null}             unite="kWh/hl"  couleurFn={null}/>
-          <CarteResume titre="CO₂"               stats={data.sCo2}   tendance={data.tCo2}   hors={null}           total={null}             unite="kg/hl"   couleurFn={null}/>
+          <CarteResume titre="Électricité"       stats={data.sElec}  tendance={data.tElec}  hors={data.rows.filter(r=>r.rElec>3.0).length} total={data.rows.length} unite="kWh/hl"  couleurFn={clElec}/>
+          <CarteResume titre="CO₂"               stats={data.sCo2}   tendance={data.tCo2}   hors={data.rows.filter(r=>r.rCo2>0.8).length} total={data.rows.length} unite="kg/hl"   couleurFn={clCo2}/>
           {data.a.sout  && <CarteResume titre="Eau soutireuse"    stats={data.sSout}  tendance={data.tSout}  hors={horsSeuil(data.rows,'rSout',data.seuils.eau_soutireuse)}    total={data.rows.length} unite="m³/h"  couleurFn={clSeuil(data.seuils.eau_soutireuse, null)}/>}
           {data.a.lub   && <CarteResume titre="Eau lubrification" stats={data.sLub}   tendance={data.tLub}   hors={horsSeuil(data.rows,'rLub',data.seuils.eau_lubrification)}   total={data.rows.length} unite="L/col"  couleurFn={clSeuil(data.seuils.eau_lubrification, null)}/>}
           {data.a.soude && <CarteResume titre="Soude"             stats={data.sSoude} tendance={data.tSoude} hors={horsSeuil(data.rows,'rSoude',data.seuils.soude)}               total={data.rows.length} unite="L/hl"   couleurFn={clSeuil(data.seuils.soude, null)}/>}

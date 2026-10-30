@@ -86,6 +86,7 @@ export default function Alertes() {
     background:T.card, border:`1px solid ${T.border}`,
     borderRadius:10, padding:'7px 12px',
     color:T.text, fontSize:13,
+    width:'100%', minWidth:0, boxSizing:'border-box',
   };
   const LS = {
     fontSize:11, fontWeight:700, color:T.textSoft,
@@ -206,6 +207,8 @@ export default function Alertes() {
 
 function CarteAlerte({ alerte, T, canDelete, onLire, onSupprimer }) {
   const [expanded, setExpanded] = useState(false);
+  const isMobile = useIsMobile();
+  const fmt = (v) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
 
   const isCritique = alerte.niveau === 'critique';
   const isWarning  = alerte.niveau === 'warning';
@@ -224,7 +227,7 @@ function CarteAlerte({ alerte, T, canDelete, onLire, onSupprimer }) {
       opacity: alerte.lu ? 0.7 : 1,
     }}>
       {/* Ligne principale */}
-      <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:12, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
         <div style={{
           width:36, height:36, borderRadius:10,
           background: bg, flexShrink:0,
@@ -233,7 +236,7 @@ function CarteAlerte({ alerte, T, canDelete, onLire, onSupprimer }) {
           <IconWarning size={18} color={color}/>
         </div>
 
-        <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ flex: isMobile ? '1 1 calc(100% - 48px)' : 1, minWidth:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
             <span style={{
               fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20,
@@ -254,13 +257,13 @@ function CarteAlerte({ alerte, T, canDelete, onLire, onSupprimer }) {
           <p style={{ fontSize:13, fontWeight:600, color:T.text, margin:'0 0 2px' }}>{alerte.message}</p>
           <p style={{ fontSize:11, color:T.textSoft, margin:0 }}>
             {dt?.toLocaleDateString('fr-FR')} à {dt?.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
-            {alerte.valeur != null && <> · Valeur : <strong>{alerte.valeur}</strong></>}
-            {alerte.seuil  != null && <> · Seuil : <strong>{alerte.seuil}</strong></>}
+            {alerte.valeur != null && <> · Valeur : <strong>{fmt(alerte.valeur)}</strong></>}
+            {alerte.seuil  != null && <> · Seuil : <strong>{fmt(alerte.seuil)}</strong></>}
           </p>
         </div>
 
         {/* Actions */}
-        <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+        <div style={{ display:'flex', gap:6, flexShrink:0, ...(isMobile ? { flexBasis:'100%', paddingLeft:48 } : {}) }}>
           {alerte.recommandation && (
             <button onClick={() => setExpanded(e=>!e)} style={{
               background:T.borderSoft, border:`1px solid ${T.border}`,

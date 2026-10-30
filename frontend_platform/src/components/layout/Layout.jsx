@@ -88,7 +88,7 @@ function useNavItems() {
     items.push({ path:'/pointage',    icon:IconClipboard, label:'Pointage' });
     items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes',
                  badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
-    items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA', short:'Maintenance' });
+    items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA', short:'Maint. IA' });
   }
   return items;
 }
