@@ -71,12 +71,12 @@ function ScoreGauge({ score, niveau, atelier, T, size = 110 }) {
         <text x={cx} y={cy - 5} textAnchor="middle"
           dominantBaseline="middle"
           fill={score != null ? T.text : T.textSoft}
-          fontSize="20" fontWeight="700" fontFamily="Arial">
+          fontSize="20" fontWeight="700" fontFamily="inherit">
           {score != null ? score : '—'}
         </text>
         {/* /100 */}
         <text x={cx} y={cy + 14} textAnchor="middle"
-          fill={T.textSoft} fontSize="10" fontFamily="Arial">
+          fill={T.textSoft} fontSize="10" fontFamily="inherit">
           /100
         </text>
       </svg>
@@ -647,7 +647,7 @@ export default function MaintenancePredictive() {
             color: chaineCritique.length > 0 ? '#EF4444' : '#22C55E',
             icon: <IconAlert s={20} c="#EF4444"/> },
         ].map((k, i) => (
-          <Card T={T} key={i}>
+          <Card T={T} key={i} style={isMobile && i === 2 ? { gridColumn:'1 / -1' } : undefined}>
             <div style={{ display:'flex', alignItems:'center',
               justifyContent:'space-between', marginBottom:10 }}>
               <div style={{ width:36, height:36, borderRadius:9,

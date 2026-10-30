@@ -314,7 +314,7 @@ export default function Dashboard() {
         {/* 1 — Production J-1 */}
         <KpiCard
           icon={<IconBottle size={isMobile?17:20} color={T.primary}/>}
-          label={`Production J-1 (objectif ${OBJECTIF_TOTAL.toLocaleString()} hl)`}
+          label={isMobile ? `Production J-1 · obj. ${OBJECTIF_TOTAL.toLocaleString()}` : `Production J-1 (objectif ${OBJECTIF_TOTAL.toLocaleString()} hl)`}
           value={productionJm1 > 0 ? productionJm1.toLocaleString() : '—'}
           unit="hl"
           color={T.primary}
@@ -329,7 +329,8 @@ export default function Dashboard() {
           <div style={{
             background: T.card, borderRadius: 14, padding: '20px',
             boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: `1px solid ${T.border}`, marginBottom: 20,
+            border: `1px solid ${T.border}`, marginBottom: 0,
+            order: 10, gridColumn: '1 / -1',
           }}>
             <div style={{ display:'flex', justifyContent:'space-between',
               alignItems:'center', marginBottom:16 }}>
@@ -385,7 +386,7 @@ export default function Dashboard() {
                       <text x="35" y="35" textAnchor="middle"
                         dominantBaseline="middle"
                         fill={score != null ? T.text : T.textSoft}
-                        fontSize="14" fontWeight="700" fontFamily="Arial">
+                        fontSize="14" fontWeight="700" fontFamily="inherit">
                         {score != null ? Math.round(score) : '—'}
                       </text>
                     </svg>
@@ -420,7 +421,7 @@ export default function Dashboard() {
         {/* 3 — Taux de saisie J-1 */}
         <KpiCard
           icon={<IconClipboard size={isMobile?17:20} color={T.gold}/>}
-          label={`Taux de saisie J-1 (${nbRelevesJm1}/${RELEVES_ATTENDUS} relevés)`}
+          label={isMobile ? `Saisie J-1 · ${nbRelevesJm1}/${RELEVES_ATTENDUS} relevés` : `Taux de saisie J-1 (${nbRelevesJm1}/${RELEVES_ATTENDUS} relevés)`}
           value={`${pctSaisie}`} unit="%"
           color={pctSaisie>=80?T.success:pctSaisie>=50?T.warning:T.danger}
           progress={pctSaisie}
@@ -511,7 +512,7 @@ export default function Dashboard() {
           </div>
 
           {/* Production J-1 détail */}
-          <div style={{ background:T.card, borderRadius:14, padding:'18px', boxShadow:'0 1px 8px rgba(0,0,0,0.06)', border:`1px solid ${T.border}` }}>
+          <div style={{ display:isMobile?'none':'block', background:T.card, borderRadius:14, padding:'18px', boxShadow:'0 1px 8px rgba(0,0,0,0.06)', border:`1px solid ${T.border}` }}>
             <div style={{ fontSize:10, color:T.textSoft, fontWeight:700, textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
               Production J-1 totale
             </div>

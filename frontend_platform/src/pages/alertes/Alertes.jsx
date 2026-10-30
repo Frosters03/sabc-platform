@@ -118,26 +118,26 @@ export default function Alertes() {
       </div>
 
       {/* Cartes stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(auto-fit,minmax(140px,1fr))', gap:isMobile?8:12, marginBottom:20 }}>
         {[
           { label:'Non lues',  value:stats.total,    color:'#EF4444' },
           { label:'Critiques', value:stats.critiques, color:'#DC2626' },
-          { label:'Total affiché', value:alertes.length, color:T.primary },
+          { label:isMobile?'Affichées':'Total affiché', value:alertes.length, color:T.primary },
         ].map(c=>(
           <div key={c.label} style={{
             background:T.card, border:`1px solid ${T.border}`,
-            borderRadius:14, padding:'16px',
+            borderRadius:14, padding:isMobile?'12px 10px':'16px',
             borderLeft:`4px solid ${c.color}`,
           }}>
-            <div style={{ fontSize:28, fontWeight:800, color:c.color }}>{c.value}</div>
-            <div style={{ fontSize:12, color:T.textSoft, marginTop:4 }}>{c.label}</div>
+            <div style={{ fontSize:isMobile?24:28, fontWeight:800, color:c.color, lineHeight:1.1 }}>{c.value}</div>
+            <div style={{ fontSize:isMobile?11:12, color:T.textSoft, marginTop:4 }}>{c.label}</div>
           </div>
         ))}
       </div>
 
       {/* Filtres */}
       <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:14, padding:16, marginBottom:20 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:12 }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(3,1fr)':'repeat(auto-fit,minmax(140px,1fr))', gap:isMobile?8:10, marginBottom:12 }}>
           <div>
             <label style={LS}>Niveau</label>
             <select value={filtreNiveau} onChange={e=>setFiltreNiveau(e.target.value)} style={IS}>

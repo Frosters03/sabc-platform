@@ -2,7 +2,7 @@
 """
 ╔══════════════════════════════════════════════════════════════════╗
 ║  SABC Ndokoti — Script de simulation (VERSION FINALE CORRIGÉE)  ║
-║  Période  : 14 mai 2026 → 14 juillet 2026                       ║
+║  Période  : 14 mai 2026 → veille d'aujourd'hui (J-1)            ║
 ║  Chaînes  : 8=4000 · 13=1200 · 14=3500 · 15=3500 · 16=3000 hl  ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  RATIOS CIBLES (zone verte confirmée) :                          ║
@@ -27,8 +27,8 @@ DATABASE_URL = os.environ.get(
     'postgresql://postgres:#Frosty2503@localhost:5432/sabc_packaging'
 )
 
-DATE_DEBUT = date(2026, 4, 23)
-DATE_FIN   = date(2026, 7, 23)
+DATE_DEBUT = date(2026, 5, 14)
+DATE_FIN   = date.today() - timedelta(days=1)   # J-1 : données à jour
 
 # ══════════════════════════════════════════════════════════════════
 # PARAMÈTRES CHAÎNES — Valeurs de base calculées analytiquement
@@ -80,7 +80,16 @@ CHAINES = {
     },
 }
 
-QUARTS         = [('22h-6h','22:00'), ('6h-14h','06:00'), ('14h-22h','14:00')]
+# Nouveaux compteurs (demandes du chef de ligne) : eau soutireuse, eau lubrification
+# soutireuse ≈ 0,42 m³/h (cible 0,50) · lubrification ≈ 0,04 L/col (cible 0,05)
+IDX0_NOUVEAUX = {'Chaîne 8': (3200, 2100), 'Chaine 13': (900, 600), 'Chaîne 14': (2700, 1800),
+                 'Chaîne 15': (2600, 1700), 'Chaîne 16': (2300, 1500)}
+for _ch, _cfg in CHAINES.items():
+    _cfg['base']['so'] = round(_cfg['obj'] / 1000 * 0.84, 2)          # m³ par quart de 8 h
+    _cfg['idx0']['so'], _cfg['idx0']['lu'] = IDX0_NOUVEAUX[_ch]
+
+# Ordre chronologique utilisé par l'application : 6h-14h → 14h-22h → 22h-6h
+QUARTS         = [('6h-14h','06:00'), ('14h-22h','14:00'), ('22h-6h','22:00')]
 QUARTS_QUALITE = [('6h-14h','08:00'), ('14h-22h','16:00'), ('22h-6h','23:00')]
 
 # 10 anomalies sur 61 jours ≈ 8% (calibré sur contamination=0.08 Isolation Forest)
@@ -101,6 +110,21 @@ ANOMALIES = {
     (date(2026, 7,16), 'Chaine 13'):  'chute_prod',        
     (date(2026, 7,20), 'Chaîne 14'):  'fuite_bain',
 }
+
+# ── Anomalies supplémentaires jusqu'à aujourd'hui (une tous les 4 à 8 jours) ──
+_rng = random.Random(2026)
+_types = ['surconso_elec', 'fuite_pasteur', 'fuite_bain', 'chute_prod',
+          'usure_sertissage', 'fuite_soutireuse', 'surconso_colle']
+_d = date(2026, 7, 24)
+while _d <= DATE_FIN:
+    _ch, _t = _rng.choice(list(CHAINES)), _rng.choice(_types)
+    if _d.weekday() != CHAINES[_ch]['entretien'] and not (_t == 'fuite_bain' and not CHAINES[_ch]['laveuse']):
+        ANOMALIES[(_d, _ch)] = _t
+    _d += timedelta(days=_rng.randint(4, 8))
+
+# Exemples supplémentaires pour la démonstration (colle ≈ 2× la cible)
+ANOMALIES[(date(2026, 9, 15), 'Chaîne 16')] = 'surconso_colle'
+ANOMALIES[(date(2026, 10, 20), 'Chaîne 8')] = 'surconso_colle'
 
 # ── Produits pour qualite_a (tous les 10, paramètres spécifiques) ──
 SPECS_BIERES = {
@@ -165,6 +189,9 @@ def generer_energie(cur):
                     idx[atelier]['pa'] += random.uniform(0.2, 0.5)
                     idx[atelier]['ae'] += random.uniform(0.1, 0.3)
                     idx[atelier]['co'] += random.uniform(0.0, 0.2)
+                    idx[atelier]['so'] += random.uniform(0.02, 0.08)
+                    idx[atelier]['lu'] += random.uniform(0.005, 0.02)
+                    soude, colle, lubri = 0.0, 0.0, 0.0
                 else:
                     # Production ~1/3 objectif ± 8%
                     prod = cfg['obj'] / 3 * random.uniform(0.90, 1.08)
@@ -191,6 +218,10 @@ def generer_energie(cur):
                         # Production réduite de 50% → TRG divisé par 2
                         prod *= random.uniform(0.45, 0.55)
 
+                    elif anomalie == 'fuite_soutireuse':
+                        # 0,42 × 2,5 ≈ 1,05 m³/h > 2 × cible (0,50) → alerte critique
+                        f['so'] = random.uniform(2.3, 2.7)
+
                     # usure_sertissage → géré dans qualite/qualite_a
 
                     # Accumulation des index
@@ -198,6 +229,14 @@ def generer_energie(cur):
                         if k in ('ri', 'ba') and not cfg['laveuse']:
                             continue  # Ch.13 : pas de laveuse
                         idx[atelier][k] += max(0.0, b[k] * f[k])
+
+                    # Eau lubrification (≈ 0,04 L/col) et consommables par quart
+                    nb_cols = prod * 100 / (cfg['format_cl'] / 100)
+                    idx[atelier]['lu'] += nb_cols * random.uniform(0.036, 0.044) / 1000
+                    soude = prod * random.uniform(0.185, 0.215) if cfg['laveuse'] else None   # L (≈ 0,20 L/hl)
+                    g_colle = random.uniform(23, 28) * (random.uniform(1.8, 2.1) if anomalie == 'surconso_colle' else 1)
+                    colle = prod * g_colle / 1000                         # kg (cible 30 g/hl)
+                    lubri = prod * random.uniform(22, 27) / 1000          # kg (cible 30 g/hl)
 
                 rows.append((
                     d, heure, quart, atelier,
@@ -209,7 +248,13 @@ def generer_energie(cur):
                     round(idx[atelier]['co'], 1),
                     round(prod, 1),
                     False,
-                    'simulation'
+                    'simulation',
+                    round(idx[atelier]['so'], 2),
+                    round(idx[atelier]['lu'], 2),
+                    None if soude is None else round(soude, 1),
+                    round(colle, 2),
+                    round(lubri, 2),
+                    round(prod * 100 / (cfg['format_cl'] / 100)),
                 ))
         d += timedelta(days=1)
 
@@ -218,7 +263,9 @@ def generer_energie(cur):
         (date,heure,quart,atelier,
          index_eau_rincage,index_eau_bain,index_eau_pasteur,
          index_eau_aero,index_elec,index_co2,
-         production_hl,arret_planifie,saisi_par)
+         production_hl,arret_planifie,saisi_par,
+         index_eau_soutireuse,index_eau_lubrification,
+         conso_soude_l,conso_colle_kg,conso_lubrifiant_kg,production_cols)
         VALUES %s
     """, rows)
     log(f"✅ lean_energie       : {len(rows)} relevés")
@@ -493,6 +540,12 @@ def generer_anomalies(cur):
         elif anomalie == 'chute_prod':
             msg = (f"⚠️ Chute de production {atelier} : {prod:.0f} hl ({e_prod:+.0f}%) "
                    f"→ Vérifier disponibilité ligne et approvisionnement matières premières")
+        elif anomalie == 'fuite_soutireuse':
+            msg = (f"⚠️ Eau soutireuse très au-dessus de la cible (0,50 m³/h) sur {atelier} "
+                   f"→ Contrôler les vannes de rinçage et les joints de la soutireuse")
+        elif anomalie == 'surconso_colle':
+            msg = (f"⚠️ Consommation de colle ≈ 2× la cible (30 g/hl) sur {atelier} "
+                   f"→ Vérifier le réglage de l'étiqueteuse et les pistolets à colle")
         elif anomalie == 'usure_sertissage':
             msg = (f"⚠️ Sertissage hors tolérance : ~20% non-conformes sur {atelier} "
                    f"→ Usure des rouleaux probable — programmer remplacement avant arrêt total")

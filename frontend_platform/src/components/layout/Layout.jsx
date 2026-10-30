@@ -81,14 +81,14 @@ function useNavItems() {
     const t = setInterval(charger, 30000);
     return () => { actif = false; clearInterval(t); };
   }, []);
-  items.push({ path:'/dashboard',   icon:IconDashboard, label:'Tableau de bord' });
+  items.push({ path:'/dashboard',   icon:IconDashboard, label:'Tableau de bord', short:'Accueil' });
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
     items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
     items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
     items.push({ path:'/pointage',    icon:IconClipboard, label:'Pointage' });
     items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes',
                  badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
-    items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA' });
+    items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA', short:'Maintenance' });
   }
   return items;
 }
@@ -383,7 +383,7 @@ function BottomNavbar({ items, T }) {
       position:'fixed', bottom:0, left:0, right:0,
       background:T.card, borderTop:`1px solid ${T.border}`,
       display:'flex', justifyContent:'space-around', alignItems:'center',
-      padding:'6px 0 12px', zIndex:1000,
+      padding:'8px 0 calc(10px + env(safe-area-inset-bottom))', zIndex:1000,
       boxShadow:'0 -4px 24px rgba(0,0,0,0.07)',
     }}>
       {items.map((item) => {
@@ -396,7 +396,7 @@ function BottomNavbar({ items, T }) {
             style={{
               display:'flex', flexDirection:'column', alignItems:'center',
               background:'none', border:'none', cursor:'pointer',
-              padding:'4px 8px',
+              padding:'4px 4px', flex:1, minWidth:0,
               color: active ? T.primary : T.textSoft,
               position:'relative',
             }}
@@ -420,10 +420,11 @@ function BottomNavbar({ items, T }) {
               }}>{item.badge > 99 ? '99+' : item.badge}</span>
             )}
             <span style={{
-              fontSize:10, fontWeight: active ? 700 : 400,
+              fontSize:10, fontWeight: active ? 700 : 500,
               marginTop:3, color: active ? T.primary : T.textSoft,
+              whiteSpace:'nowrap', letterSpacing:0.1,
             }}>
-              {item.label}
+              {item.short || item.label}
             </span>
           </button>
         );
@@ -604,6 +605,8 @@ export default function Layout() {
     });
   };
 
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+
   const title = pageTitles[location.pathname] || 'SABC Platform';
 
   return (
@@ -611,7 +614,7 @@ export default function Layout() {
       <div style={{
         background:T.bg, minHeight:'100vh',
         transition:'background 0.3s',
-        overflowX:'hidden', maxWidth:'100vw',
+        overflowX:'clip', maxWidth:'100vw',
       }}>
         {/* Sidebar PC */}
         {!isMobile && <Sidebar items={items} T={T} />}

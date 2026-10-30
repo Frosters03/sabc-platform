@@ -338,7 +338,7 @@ export default function SaisieEnergie() {
           </div>
 
           {/* Quart */}
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 14, gridColumn: isMobile ? '1 / -1' : undefined }}>
             <label style={{ ...labelStyle, color: T.textSoft }}>Quart</label>
             <select value={form.quart}
               onChange={(e) => set('quart')(e.target.value)}
@@ -353,7 +353,7 @@ export default function SaisieEnergie() {
           </div>
 
           {/* Atelier */}
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 14, gridColumn: isMobile ? '1 / -1' : undefined }}>
             <label style={{ ...labelStyle, color: T.textSoft }}>Atelier / Chaîne</label>
             <select value={form.atelier}
               onChange={(e) => set('atelier')(e.target.value)}
@@ -369,7 +369,7 @@ export default function SaisieEnergie() {
 
           {/* Format bouteille — visible uniquement pour Ch.15 et Ch.16 */}
           {showFormatSelector && (
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 14, gridColumn: isMobile ? '1 / -1' : undefined }}>
               <label style={{ ...labelStyle, color: T.textSoft }}>Format bouteille</label>
               <select value={form.format_bouteille}
                 onChange={(e) => set('format_bouteille')(e.target.value)}
