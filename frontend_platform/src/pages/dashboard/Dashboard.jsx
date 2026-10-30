@@ -118,13 +118,13 @@ function StatutChaine({ nom, statut, prod, objectif, T }) {
 function AlerteItem({ alerte, T }) {
   const color = alerte.niveau==='critique' ? T.danger : T.warning;
   return (
-    <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'12px 0', borderBottom:`1px solid ${T.border}` }}>
+    <div style={{ display:'flex', alignItems:'flex-start', gap:12, minWidth:0, padding:'12px 0', borderBottom:`1px solid ${T.border}` }}>
       <div style={{ width:34, height:34, borderRadius:9, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         <IconWarning size={17} color={color}/>
       </div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:13, fontWeight:600, color:T.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{alerte.atelier}</div>
-        <div style={{ fontSize:11, color:T.textSoft, marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{alerte.message}</div>
+        <div style={{ fontSize:11, color:T.textSoft, marginTop:2, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden', wordBreak:'break-word' }}>{alerte.message}</div>
       </div>
       <div style={{ fontSize:10, color:T.textMuted, flexShrink:0, marginTop:2 }}>
         {new Date(alerte.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
@@ -551,7 +551,7 @@ export default function Dashboard() {
           >Voir tout →</span>
         </div>
         {alertes.length > 0 ? (
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'repeat(auto-fill, minmax(300px, 1fr))', gap:'0 32px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'minmax(0,1fr)':'repeat(auto-fill, minmax(300px, 1fr))', gap:'0 32px' }}>
             {alertes.map((a,i) => <AlerteItem key={i} alerte={a} T={T}/>)}
           </div>
         ) : (
