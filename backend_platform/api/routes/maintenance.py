@@ -160,9 +160,9 @@ def get_previsions(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user),
 ):
-    """Retourne les prévisions Prophet les plus récentes."""
-    # Trouver la date de calcul la plus récente
     from sqlalchemy import func
+
+    # Récupère la date de calcul la plus récente
     derniere_date = db.query(
         func.max(PrevisionEnergie.date_calcul)
     ).scalar()
@@ -173,6 +173,7 @@ def get_previsions(
     query = db.query(PrevisionEnergie).filter(
         PrevisionEnergie.date_calcul == derniere_date
     )
+
     if atelier:
         query = query.filter(PrevisionEnergie.atelier == atelier)
 

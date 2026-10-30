@@ -79,10 +79,10 @@ elec_base = {
 
 # ── INSERTION ─────────────────────────────────────────────
 dates = [
-    date(2026, 4, 14),  # Lundi
-    date(2026, 4, 15),  # Mardi
-    date(2026, 4, 16),  # Mercredi
-    date(2026, 4, 17),  # Jeudi (jusqu'à 9h = quart 6h-14h)
+    date(2026, 6, 30),  # Lundi
+    date(2026, 7, 1),  # Mardi
+    date(2026, 7, 2),  # Mercredi
+    date(2026, 7, 3),  # Jeudi (jusqu'à 9h = quart 6h-14h)
 ]
 
 quarts = ["6h-14h", "14h-22h", "22h-6h"]
@@ -92,7 +92,7 @@ count = 0
 for d in dates:
     for chaine in chaines:
         # Jeudi 16 avril : seulement quart 6h-14h (jusqu'à 9h)
-        quarts_jour = ["6h-14h"] if d == date(2026, 4, 16) else quarts
+        quarts_jour = ["6h-14h"] if d == date(2026, 7, 3) else quarts
         
         for quart in quarts_jour:
             # Variation légère selon le jour (+/- 2%)

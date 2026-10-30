@@ -12,7 +12,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-const ATELIERS = ['Chaîne 8', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16'];
+const ATELIERS = ['Chaîne 8', 'Chaine 13', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16'];
 
 // ── LIMITES DE CONTRÔLE SPC ───────────────────────────────
 const LIMITES = {

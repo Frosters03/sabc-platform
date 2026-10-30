@@ -33,8 +33,11 @@ def creer_releve(
         LeanEnergie.id != releve.id
     ).order_by(LeanEnergie.date.desc(), LeanEnergie.id.desc()).first()
 
+    alertes = []
     if precedent:
-        analyser_energie(releve, precedent, data.atelier, db)
+        alertes = analyser_energie(releve, precedent, data.atelier, db) or []
+    # Renvoyées à l'opérateur pour affichage immédiat après la saisie
+    releve.alertes_generees = alertes
 
     # ── POINT D'EXTENSION IA ──────────────────────────────
     # Quand le module IA est prêt, décommenter :
@@ -66,6 +69,17 @@ def get_releves(
     if date_fin:
         query = query.filter(LeanEnergie.date <= date_fin)
     return query.order_by(LeanEnergie.date.desc()).limit(limit).all()
+
+
+@router.get("/seuils")
+def get_seuils(
+    atelier: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Cibles et limites (dynamiques) des nouveaux indicateurs pour une chaîne"""
+    from services.alertes_service import seuils_nouveaux
+    return seuils_nouveaux(db, atelier)
 
 
 @router.get("/{releve_id}", response_model=LeanEnergieResponse)

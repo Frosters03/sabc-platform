@@ -27,7 +27,8 @@ const IconCheck   = ({size=18,color='currentColor'}) => <svg width={size} height
 const IconWarning = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>;
 
 // ── CHAMP DE SAISIE ───────────────────────────────────────
-function InputField({ label, icon, iconColor, value, onChange, unit, placeholder, T }) {
+function InputField({ label, icon, iconColor, value, onChange, unit, placeholder, T,
+                      unitOptions, unitValue, onUnitChange }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ marginBottom: 14 }}>
@@ -59,7 +60,21 @@ function InputField({ label, icon, iconColor, value, onChange, unit, placeholder
             minWidth: 0,
           }}
         />
-        {unit && (
+        {unitOptions && (
+          <select
+            value={unitValue}
+            onChange={(e) => onUnitChange(e.target.value)}
+            style={{
+              padding: '0 6px', fontSize: 11, fontWeight: 600, color: T.text,
+              background: T.borderSoft, border: 'none',
+              borderLeft: `1px solid ${T.border}`, outline: 'none',
+              alignSelf: 'stretch', cursor: 'pointer',
+            }}
+          >
+            {unitOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
+        {!unitOptions && unit && (
           <span style={{
             padding: '0 10px', fontSize: 11, color: T.textSoft,
             background: T.borderSoft, borderLeft: `1px solid ${T.border}`,
@@ -116,7 +131,14 @@ const FORM_VIDE = {
   index_eau_aero:   '',
   index_elec:       '',
   index_co2:        '',
+  index_eau_soutireuse:    '',
+  index_eau_lubrification: '',
+  conso_soude_l:       '',
+  conso_colle_kg:      '',
+  conso_lubrifiant_kg: '',
   production_hl:    '',
+  production_cols:  '',
+  format_bouteille: '65cl',
 };
 
 // ── STYLES COMMUNS ────────────────────────────────────────
@@ -131,6 +153,26 @@ const inputStyle = (T) => ({
   outline: 'none', boxSizing: 'border-box',
 });
 
+// ── UNITÉS EAU : le compteur peut être en m³ ou en dm³ (= litres) ──
+const UNITES_EAU = [
+  { value: 'm3',  label: 'm³' },
+  { value: 'dm3', label: 'dm³ (L)' },
+];
+const CHAMPS_EAU = [
+  'index_eau_rincage', 'index_eau_bain', 'index_eau_pasteur',
+  'index_eau_aero', 'index_eau_soutireuse', 'index_eau_lubrification',
+];
+const UNITES_DEFAUT = Object.fromEntries(CHAMPS_EAU.map(c => [c, 'm3']));
+
+// Valeur saisie → nombre (null si vide)
+const num = (v) => (v === '' || v === null || v === undefined) ? null : parseFloat(v);
+// Convertit toujours en m³ avant l'enregistrement (1 m³ = 1000 dm³)
+const enM3 = (v, unite) => {
+  const n = num(v);
+  if (n === null || Number.isNaN(n)) return null;
+  return unite === 'dm3' ? n / 1000 : n;
+};
+
 // ── PAGE SAISIE ENERGIE ───────────────────────────────────
 export default function SaisieEnergie() {
   const { user }  = useAuth();
@@ -140,19 +182,33 @@ export default function SaisieEnergie() {
   const [form,    setForm]    = useState(FORM_VIDE);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  const [unites,  setUnites]  = useState(UNITES_DEFAUT);
+  const setUnite = (champ) => (u) => setUnites(prev => ({ ...prev, [champ]: u }));
+  // Props communes d'un champ d'eau : menu m³ / dm³
+  const eau = (champ) => ({
+    value: form[champ],
+    onChange: set(champ),
+    unitOptions: UNITES_EAU,
+    unitValue: unites[champ],
+    onUnitChange: setUnite(champ),
+  });
 
   const set = (field) => (value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const ateliers = ['Chaîne 8', 'Chaine 13', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16'];
-  const quarts   = ['22h-6h', '6h-14h', '14h-22h'];
+  const showFormatSelector = ['Chaîne 15', 'Chaîne 16'].includes(form.atelier);
+  // Saisie par quart OU en une seule fois pour la journée complète (24h)
+  const quarts   = ['22h-6h', '6h-14h', '14h-22h', 'Journée complète'];
 
   const valider = () => {
-    const champs = [
+    const champsCommuns = [
       'date','heure','quart','atelier',
-      'index_eau_rincage','index_eau_bain',
       'index_eau_pasteur','index_eau_aero',
       'index_elec','index_co2','production_hl',
     ];
+    const champs = form.atelier === 'Chaine 13'
+      ? champsCommuns
+      : [...champsCommuns, 'index_eau_rincage', 'index_eau_bain'];
     for (const c of champs) {
       if (!form[c] && form[c] !== 0)
         return `Le champ "${c.replace(/_/g, ' ')}" est obligatoire`;
@@ -170,15 +226,23 @@ export default function SaisieEnergie() {
     setLoading(true);
     setMessage(null);
     try {
-      await energieAPI.creer({
+      const res = await energieAPI.creer({
         ...form,
-        index_eau_rincage: parseFloat(form.index_eau_rincage),
-        index_eau_bain:    parseFloat(form.index_eau_bain),
-        index_eau_pasteur: parseFloat(form.index_eau_pasteur),
-        index_eau_aero:    parseFloat(form.index_eau_aero),
+        // Eau : conversion en m³ selon l'unité choisie (m³ ou dm³)
+        index_eau_rincage: form.atelier === 'Chaine 13' ? 0 : enM3(form.index_eau_rincage, unites.index_eau_rincage),
+        index_eau_bain:    form.atelier === 'Chaine 13' ? 0 : enM3(form.index_eau_bain, unites.index_eau_bain),
+        index_eau_pasteur: enM3(form.index_eau_pasteur, unites.index_eau_pasteur),
+        index_eau_aero:    enM3(form.index_eau_aero, unites.index_eau_aero),
+        index_eau_soutireuse:    enM3(form.index_eau_soutireuse, unites.index_eau_soutireuse),
+        index_eau_lubrification: enM3(form.index_eau_lubrification, unites.index_eau_lubrification),
         index_elec:        parseFloat(form.index_elec),
         index_co2:         parseFloat(form.index_co2),
+        // Consommables (saisie directe : litres / kg)
+        conso_soude_l:       num(form.conso_soude_l),
+        conso_colle_kg:      num(form.conso_colle_kg),
+        conso_lubrifiant_kg: num(form.conso_lubrifiant_kg),
         production_hl:     parseFloat(form.production_hl),
+        production_cols:   num(form.production_cols),
         saisi_par:         user?.username,
       });
       setForm({
@@ -186,8 +250,19 @@ export default function SaisieEnergie() {
         date:  new Date().toISOString().split('T')[0],
         heure: new Date().toTimeString().slice(0, 5),
       });
-      setMessage({ type: 'success', text: 'Relevé enregistré avec succès !' });
-      setTimeout(() => setMessage(null), 5000);
+      const alertes = res?.data?.alertes_generees || [];
+      if (alertes.length > 0) {
+        // Une valeur saisie provoque un ratio hors cible / hors limite → alerte immédiate
+        setMessage({
+          type: 'warning',
+          text: `Relevé enregistré — ${alertes.length} alerte(s) générée(s) : ` +
+                alertes.map(a => `[${a.niveau}] ${a.message}`).join(' | '),
+        });
+        setTimeout(() => setMessage(null), 12000);
+      } else {
+        setMessage({ type: 'success', text: 'Relevé enregistré avec succès !' });
+        setTimeout(() => setMessage(null), 5000);
+      }
     } catch (e) {
       setMessage({
         type: 'error',
@@ -212,14 +287,14 @@ export default function SaisieEnergie() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '12px 16px', borderRadius: 12, marginBottom: 16,
-          background: message.type === 'success' ? '#F0FDF4' : '#FEF2F2',
-          border: `1px solid ${message.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
-          color: message.type === 'success' ? T.success : T.danger,
+          background: message.type === 'success' ? '#F0FDF4' : message.type === 'warning' ? '#FFFBEB' : '#FEF2F2',
+          border: `1px solid ${message.type === 'success' ? '#BBF7D0' : message.type === 'warning' ? '#FDE68A' : '#FECACA'}`,
+          color: message.type === 'success' ? T.success : message.type === 'warning' ? '#B45309' : T.danger,
           fontSize: 13, fontWeight: 600, animation: 'fadeIn 0.3s ease',
         }}>
           {message.type === 'success'
             ? <IconCheck size={17} color={T.success} />
-            : <IconWarning size={17} color={T.danger} />
+            : <IconWarning size={17} color={message.type === 'warning' ? '#B45309' : T.danger} />
           }
           {message.text}
         </div>
@@ -291,12 +366,26 @@ export default function SaisieEnergie() {
               {ateliers.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
+
+          {/* Format bouteille — visible uniquement pour Ch.15 et Ch.16 */}
+          {showFormatSelector && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ ...labelStyle, color: T.textSoft }}>Format bouteille</label>
+              <select value={form.format_bouteille}
+                onChange={(e) => set('format_bouteille')(e.target.value)}
+                style={{ ...inputStyle(T), cursor: 'pointer' }}
+              >
+                <option value="65cl">65 cl</option>
+                <option value="50cl">50 cl</option>
+              </select>
+            </div>
+          )}
         </div>
       </SectionCard>
 
       {/* ── EAU ── */}
       <SectionCard
-        title="Index eau (m³ cumulés)"
+        title="Index eau (compteurs cumulés)"
         icon={<IconWater size={15} color="#3B82F6" />}
         iconColor="#3B82F6" T={T}
       >
@@ -305,37 +394,86 @@ export default function SaisieEnergie() {
           gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: '0 14px',
         }}>
-          <InputField
-            label="Laveuse — rinçage"
-            icon={<IconWater size={13} color="#3B82F6" />}
-            iconColor="#3B82F6"
-            value={form.index_eau_rincage}
-            onChange={set('index_eau_rincage')}
-            unit="m³" T={T}
-          />
-          <InputField
-            label="Laveuse — bain"
-            icon={<IconWater size={13} color="#3B82F6" />}
-            iconColor="#3B82F6"
-            value={form.index_eau_bain}
-            onChange={set('index_eau_bain')}
-            unit="m³" T={T}
-          />
+
+          {/* Laveuse — masqué pour Chaîne 13 (cannettes, pas de bouteilles) */}
+          {form.atelier !== 'Chaine 13' && (
+            <>
+              <InputField
+                label="Laveuse — rinçage"
+                icon={<IconWater size={13} color="#3B82F6" />}
+                iconColor="#3B82F6"
+                {...eau('index_eau_rincage')} T={T}
+              />
+              <InputField
+                label="Laveuse — bain"
+                icon={<IconWater size={13} color="#3B82F6" />}
+                iconColor="#3B82F6"
+                {...eau('index_eau_bain')} T={T}
+              />
+            </>
+          )}
           <InputField
             label="Pasteurisateur"
             icon={<IconWater size={13} color="#3B82F6" />}
             iconColor="#3B82F6"
-            value={form.index_eau_pasteur}
-            onChange={set('index_eau_pasteur')}
-            unit="m³" T={T}
+            {...eau('index_eau_pasteur')} T={T}
           />
           <InputField
             label="Appoint d'eau aéro"
             icon={<IconWater size={13} color="#3B82F6" />}
             iconColor="#3B82F6"
-            value={form.index_eau_aero}
-            onChange={set('index_eau_aero')}
-            unit="m³" T={T}
+            {...eau('index_eau_aero')} T={T}
+          />
+          <InputField
+            label="Eau soutireuse"
+            icon={<IconWater size={13} color="#3B82F6" />}
+            iconColor="#3B82F6"
+            {...eau('index_eau_soutireuse')} T={T}
+          />
+          <InputField
+            label="Eau lubrification"
+            icon={<IconWater size={13} color="#3B82F6" />}
+            iconColor="#3B82F6"
+            {...eau('index_eau_lubrification')} T={T}
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── CONSOMMABLES ── */}
+      <SectionCard
+        title={form.quart === 'Journée complète' ? 'Consommables — journée complète'
+               : form.quart ? `Consommables — quart ${form.quart}` : 'Consommables'}
+        icon={<IconBottle size={15} color="#8B5CF6" />}
+        iconColor="#8B5CF6" T={T}
+      >
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+          gap: '0 14px',
+        }}>
+          <InputField
+            label="Soude"
+            icon={<IconBottle size={13} color="#8B5CF6" />}
+            iconColor="#8B5CF6"
+            value={form.conso_soude_l}
+            onChange={set('conso_soude_l')}
+            unit="L" T={T}
+          />
+          <InputField
+            label="Colle"
+            icon={<IconBottle size={13} color="#8B5CF6" />}
+            iconColor="#8B5CF6"
+            value={form.conso_colle_kg}
+            onChange={set('conso_colle_kg')}
+            unit="kg" T={T}
+          />
+          <InputField
+            label="Lubrifiant"
+            icon={<IconBottle size={13} color="#8B5CF6" />}
+            iconColor="#8B5CF6"
+            value={form.conso_lubrifiant_kg}
+            onChange={set('conso_lubrifiant_kg')}
+            unit="kg" T={T}
           />
         </div>
       </SectionCard>
@@ -348,7 +486,7 @@ export default function SaisieEnergie() {
       >
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: '0 14px',
         }}>
           <InputField
@@ -367,16 +505,22 @@ export default function SaisieEnergie() {
             onChange={set('index_co2')}
             unit="kg" T={T}
           />
-          <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
-            <InputField
-              label="Production"
-              icon={<IconBottle size={13} color={T.primary} />}
-              iconColor={T.primary}
-              value={form.production_hl}
-              onChange={set('production_hl')}
-              unit="hl" T={T}
-            />
-          </div>
+          <InputField
+            label="Production"
+            icon={<IconBottle size={13} color={T.primary} />}
+            iconColor={T.primary}
+            value={form.production_hl}
+            onChange={set('production_hl')}
+            unit="hl" T={T}
+          />
+          <InputField
+            label="Production en col"
+            icon={<IconBottle size={13} color={T.primary} />}
+            iconColor={T.primary}
+            value={form.production_cols}
+            onChange={set('production_cols')}
+            unit="cols" placeholder="0" T={T}
+          />
         </div>
       </SectionCard>
 

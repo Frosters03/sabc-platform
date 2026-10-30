@@ -18,14 +18,25 @@ class LeanEnergieCreate(BaseModel):
     index_eau_aero:     Optional[float] = None   # m³ cumulés
     index_elec:         Optional[float] = None   # kWh cumulés
     index_co2:          Optional[float] = None   # kg cumulés
+    index_eau_soutireuse:    Optional[float] = None   # m³ cumulés
+    index_eau_lubrification: Optional[float] = None   # m³ cumulés
+
+    # Consommables saisis directement (quantité consommée sur le quart)
+    conso_soude_l:       Optional[float] = None   # litres
+    conso_colle_kg:      Optional[float] = None   # kg
+    conso_lubrifiant_kg: Optional[float] = None   # kg
 
     production_hl:      Optional[float] = None   # hl de la veille
+    production_cols:    Optional[float] = None   # nombre de cols (bouteilles / canettes)
 
 class LeanEnergieResponse(LeanEnergieCreate):
     """Ce qu'on renvoie — avec en plus les consommations calculées"""
     id:                 int
     saisi_par:          Optional[str]      = None
     created_at:         Optional[datetime] = None
+
+    # Alertes déclenchées par ce relevé (renseigné seulement à la création)
+    alertes_generees:   Optional[list[dict]] = None
 
     # Consommations calculées (index actuel - index précédent)
     # Ces champs sont calculés côté API, pas stockés en BDD
@@ -159,4 +170,4 @@ class MessageResponse(BaseModel):
     """Réponse simple pour confirmer une action"""
     message: str
     success: bool = True
-    data:    Optional[Any] = None
+    data:    Optional[Any] = None

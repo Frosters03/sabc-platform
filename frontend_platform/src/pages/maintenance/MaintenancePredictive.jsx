@@ -901,7 +901,8 @@ export default function MaintenancePredictive() {
               <strong style={{ color:T.text }}>Formule TRG :</strong>{' '}
               [Bonnes bouteilles (hl) / (Cadence nominale × Temps d'ouverture 24h)] × 100<br/>
               <strong style={{ color:T.text }}>Cadence nominale :</strong>{' '}
-              Ch.8 = 153 hl/h · Ch.14 = 135 hl/h · Ch.15 = 123 hl/h · Ch.16 = 151 hl/h<br/>
+              Ch.8 = 166,7 hl/h · Ch.13 = 50,0 hl/h · Ch.14 = 145,8 hl/h · 
+              Ch.15 = 145,8 hl/h · Ch.16 = 125,0 hl/h
               <strong style={{ color:T.text }}>Bonnes bouteilles :</strong>{' '}
               Production réelle × Conformité qualité × Conformité sertissage<br/>
               <strong style={{ color:T.text }}>Objectifs :</strong>{' '}

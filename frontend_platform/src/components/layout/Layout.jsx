@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import { useState, useEffect, createContext, useContext } from 'react';
 
 // ── ICÔNES SVG INLINE ─────────────────────────────────────
@@ -65,12 +66,28 @@ function useIsMobile() {
 function useNavItems() {
   const { hasRole } = useAuth();
   const items = [];
+
+  // Nombre d'alertes non lues (badge sur l'onglet Alertes) — rafraîchi toutes les 30 s
+  const [nbAlertes, setNbAlertes] = useState({ total: 0, critiques: 0 });
+  useEffect(() => {
+    let actif = true;
+    const charger = async () => {
+      try {
+        const res = await api.get('/alertes/count');
+        if (actif) setNbAlertes(res.data);
+      } catch (e) { /* silencieux : le badge est facultatif */ }
+    };
+    charger();
+    const t = setInterval(charger, 30000);
+    return () => { actif = false; clearInterval(t); };
+  }, []);
   items.push({ path:'/dashboard',   icon:IconDashboard, label:'Tableau de bord' });
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
     items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
     items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
     items.push({ path:'/pointage',    icon:IconClipboard, label:'Pointage' });
-    items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes' });
+    items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes',
+                 badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
     items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA' });
   }
   return items;
@@ -181,6 +198,14 @@ function Sidebar({ items, T }) {
               <span style={{ fontSize:13, fontWeight: active ? 600 : 400, color: active ? T.primary : T.textSoft }}>
                 {item.label}
               </span>
+              {item.badge > 0 && (
+                <span style={{
+                  marginLeft:'auto', minWidth:20, height:20, padding:'0 6px',
+                  borderRadius:10, background: item.critique ? '#DC2626' : '#F59E0B',
+                  color:'#fff', fontSize:11, fontWeight:700,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                }}>{item.badge > 99 ? '99+' : item.badge}</span>
+              )}
               {active && (
                 <div style={{
                   marginLeft:'auto', width:6, height:6,
@@ -385,6 +410,15 @@ function BottomNavbar({ items, T }) {
               }} />
             )}
             <NavIcon size={22} color={active ? T.primary : T.textSoft} />
+            {item.badge > 0 && (
+              <span style={{
+                position:'absolute', top:0, right:2, minWidth:16, height:16,
+                padding:'0 4px', borderRadius:8,
+                background: item.critique ? '#DC2626' : '#F59E0B',
+                color:'#fff', fontSize:9, fontWeight:700,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>{item.badge > 99 ? '99+' : item.badge}</span>
+            )}
             <span style={{
               fontSize:10, fontWeight: active ? 700 : 400,
               marginTop:3, color: active ? T.primary : T.textSoft,

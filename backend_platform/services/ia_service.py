@@ -14,21 +14,34 @@ from models.maintenance_predictive import (
     ResultatAnomalie, ScoreSante, PrevisionEnergie, OEEJournalier
 )
 
-ATELIERS = ["Chaîne 8", "Chaîne 14", "Chaîne 15", "Chaîne 16"]
+ATELIERS = ["Chaîne 8","Chaine 13", "Chaîne 14", "Chaîne 15", "Chaîne 16"]
 
 OBJECTIF_JOUR = {
-    "Chaîne 8":  3675.0,
-    "Chaîne 14": 3232.0,
-    "Chaîne 15": 2941.0,
-    "Chaîne 16": 3614.0,
+    "Chaîne 8":  4000,
+    "Chaine 13": 1200,
+    "Chaîne 14": 3500,
+    "Chaîne 15": 3500,
+    "Chaîne 16": 3000,
+}
+
+CADENCE_HL_H = {
+    'Chaîne 8':  4000/24,   # 166.7 hl/h
+    'Chaine 13': 1200/24,   # 50.0 hl/h
+    'Chaîne 14': 3500/24,   # 145.8 hl/h
+    'Chaîne 15': 3500/24,   # 145.8 hl/h
+    'Chaîne 16': 3000/24,   # 125.0 hl/h
 }
 
 # Normes qualité brassicoles
 NORMES_QUALITE = {
-    "brix_min": 10.5, "brix_max": 11.5,
-    "co2q_min": 5.0,  "co2q_max": 6.0,
+    # Couvre toutes les bières SABC : Beaufort Light 9.70°P → Castle Milk 14.40°P
+    "brix_min": 9.5,  "brix_max": 14.5,
+    # CO₂ qualité : zone acceptable toutes bières (4.90–6.00 g/L)
+    "co2q_min": 4.7,  "co2q_max": 6.3,
+    # BO₂ dissous : limite supérieure SABC
     "bo2_max":  0.10,
-    "sertissage_min": 1.10, "sertissage_max": 1.15,
+    # Sertissage : plage centrée sur 1.12 ± 0.08
+    "sertissage_min": 1.04, "sertissage_max": 1.20,
 }
 
 FEATURES = [
@@ -41,34 +54,74 @@ FEATURES = [
 # HELPERS
 # ════════════════════════════════════════════════════════════
 
+# Ordre chronologique des saisies d'une même date
+ORDRE_QUART = {"6h-14h": 1, "14h-22h": 2, "22h-6h": 3, "Journée complète": 4}
+
+# Compteurs cumulés (index) : la consommation = index actuel − index précédent.
+# Les valeurs sont toujours stockées en m³ (conversion m³ / dm³ faite à la saisie).
+COMPTEURS_CUMULES = [
+    "index_elec", "index_eau_rincage", "index_eau_bain",
+    "index_eau_pasteur", "index_eau_aero", "index_co2",
+    "index_eau_soutireuse", "index_eau_lubrification",
+]
+# Quantités saisies directement (consommation du quart ou de la journée saisie)
+QUANTITES_DIRECTES = [
+    "production_hl", "production_cols",
+    "conso_soude_l", "conso_colle_kg", "conso_lubrifiant_kg",
+]
+
+
 def charger_donnees_energie(db: Session, atelier: str,
                              nb_jours: int = 90) -> pd.DataFrame:
-    """Charge et agrège les relevés énergie par jour (hors arrêts planifiés)."""
+    """
+    Charge les relevés énergie et renvoie la CONSOMMATION JOURNALIÈRE.
+
+    - Les compteurs (index cumulés) sont transformés en consommation par différence
+      entre deux relevés consécutifs (quart ou journée complète, peu importe).
+    - Les consommations de tous les relevés d'une même date sont additionnées
+      (3 quarts, ou 1 relevé « Journée complète »).
+    - Les relevés en arrêt planifié et les jours sans production (entretien)
+      sont exclus.
+    """
     date_debut = date.today() - timedelta(days=nb_jours)
+
     releves = db.query(LeanEnergie).filter(
         LeanEnergie.atelier == atelier,
         LeanEnergie.date    >= date_debut,
-        LeanEnergie.arret_planifie == False,
     ).all()
 
-    if not releves:
+    if len(releves) < 2:
         return pd.DataFrame()
 
-    rows = [{
-        "date":              r.date,
-        "index_elec":        r.index_elec        or 0,
-        "index_eau_rincage": r.index_eau_rincage  or 0,
-        "index_eau_bain":    r.index_eau_bain     or 0,
-        "index_eau_pasteur": r.index_eau_pasteur  or 0,
-        "index_eau_aero":    r.index_eau_aero     or 0,
-        "index_co2":         r.index_co2          or 0,
-        "production_hl":     r.production_hl      or 0,
-    } for r in releves]
+    # Ordre chronologique : date, puis quart, puis ordre de saisie
+    releves.sort(key=lambda r: (r.date, ORDRE_QUART.get(r.quart, 0), r.id))
+
+    def valeur(r, champ):
+        v = getattr(r, champ, None)
+        return float(v) if v is not None else None
+
+    rows = []
+    for prec, cur in zip(releves, releves[1:]):
+        if cur.arret_planifie:
+            continue  # arrêt planifié : exclu
+        row = {"date": cur.date}
+        for champ in COMPTEURS_CUMULES:
+            a, b = valeur(cur, champ), valeur(prec, champ)
+            # Compteur absent ou remis à zéro → 0 (valeurs négatives ignorées)
+            row[champ] = max(0.0, a - b) if (a is not None and b is not None) else 0.0
+        for champ in QUANTITES_DIRECTES:
+            row[champ] = valeur(cur, champ) or 0.0
+        rows.append(row)
+
+    if not rows:
+        return pd.DataFrame()
 
     df = pd.DataFrame(rows)
-    # Agrégation journalière (somme des 3 quarts)
+    # Agrégation journalière (somme des relevés de la date)
     df = df.groupby("date").sum().reset_index()
-    return df.sort_values("date")
+    # Jours d'entretien (aucune production) exclus de l'analyse
+    df = df[df["production_hl"] > 0].reset_index(drop=True)
+    return df.sort_values("date").reset_index(drop=True)
 
 
 def charger_donnees_qualite(db: Session, atelier: str,
@@ -225,6 +278,36 @@ def analyser_anomalies(db: Session, atelier: str) -> dict:
             ecart_production_pct  = float(ecart("production_hl")),
             message_xai    = message,
         ))
+
+    db.commit()
+    # ── GÉNÉRATION ALERTES POUR LES ANOMALIES DÉTECTÉES ──────
+    from models.alerte import Alerte
+    from datetime import datetime
+
+    for i, row in df.iterrows():
+        if scores[i] == -1:  # anomalie détectée
+            # Évite les doublons
+            existante = db.query(Alerte).filter(
+                Alerte.atelier == atelier,
+                Alerte.message.contains(str(row["date"])),
+            ).first()
+            if existante:
+                continue
+
+            message_xai = generer_message_xai(
+                atelier, row["date"], True, row, baselines, features_dispo
+            )
+
+            db.add(Alerte(
+                source         = "IA",
+                niveau         = "warning",
+                atelier        = atelier,
+                message        = f"Anomalie détectée — {atelier} — {row['date']} : {message_xai[:200]}",
+                valeur         = float(scores_raw[i]),
+                seuil          = -0.5,
+                recommandation = message_xai,
+                lu             = False,
+            ))
 
     db.commit()
     return {
@@ -454,10 +537,16 @@ def calculer_oee(db: Session, atelier: str, nb_jours: int = 30) -> dict:
     import json as _json
     date_fin   = date.today()
     date_debut = date_fin - timedelta(days=nb_jours)
+    
+    from sqlalchemy import or_
 
     releves_e = db.query(LeanEnergie).filter(
         LeanEnergie.atelier == atelier,
         LeanEnergie.date    >= date_debut,
+        or_(
+            LeanEnergie.arret_planifie == False,
+            LeanEnergie.arret_planifie == None,
+        ),
     ).all()
 
     if not releves_e:
@@ -478,7 +567,7 @@ def calculer_oee(db: Session, atelier: str, nb_jours: int = 30) -> dict:
     # = jours de production planifiés / jours calendaire total
     # Les jours d'entretien hebdomadaire réduisent ce taux
     total_jours      = len(df_day)
-    jours_entretien  = int(df_day["arret_planifie"].sum())
+    jours_entretien  = int((df_day["production_hl"] == 0).sum())
     jours_planifies  = total_jours - jours_entretien
     taux_utilisation = jours_planifies / total_jours if total_jours > 0 else 1.0
 

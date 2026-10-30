@@ -40,6 +40,24 @@ def startup():
     # Crée les tables si elles n'existent pas (sans effacer)
     create_tables()
 
+    # Ajoute les nouvelles colonnes lean_energie sur une base déjà existante
+    # (create_all ne modifie pas une table existante). Sans effet si déjà présentes.
+    from sqlalchemy import text
+    from core.database import engine
+    try:
+        with engine.begin() as conn:
+            for col, typ in [
+                ("index_eau_soutireuse",    "DOUBLE PRECISION"),
+                ("index_eau_lubrification", "DOUBLE PRECISION"),
+                ("conso_soude_l",           "DOUBLE PRECISION"),
+                ("conso_colle_kg",          "DOUBLE PRECISION"),
+                ("conso_lubrifiant_kg",     "DOUBLE PRECISION"),
+                ("production_cols",         "DOUBLE PRECISION"),
+            ]:
+                conn.execute(text(f"ALTER TABLE lean_energie ADD COLUMN IF NOT EXISTS {col} {typ}"))
+    except Exception as e:
+        print(f"Migration lean_energie: {e}")
+
     # Crée les utilisateurs par défaut s'ils n'existent pas
     db = SessionLocal()
     try:
@@ -100,4 +118,4 @@ def root():
         "status": "running",
         "docs": "/docs"
     }
-    
+    

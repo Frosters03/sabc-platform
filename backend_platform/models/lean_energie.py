@@ -18,7 +18,14 @@ class LeanEnergie(Base):
     index_eau_aero      = Column(Float, nullable=True)   # m³
     index_elec          = Column(Float, nullable=True)   # kWh
     index_co2           = Column(Float, nullable=True)   # kg
+    # ── Nouveaux compteurs (eau toujours stockée en m³, quelle que soit l'unité choisie à la saisie)
+    index_eau_soutireuse    = Column(Float, nullable=True)   # m³ cumulés
+    index_eau_lubrification = Column(Float, nullable=True)   # m³ cumulés
+    conso_soude_l           = Column(Float, nullable=True)   # litres consommés sur le quart
+    conso_colle_kg          = Column(Float, nullable=True)   # kg consommés sur le quart
+    conso_lubrifiant_kg     = Column(Float, nullable=True)   # kg consommés sur le quart
     production_hl = Column(Float, nullable=True)   # hl
+    production_cols = Column(Float, nullable=True) # nombre de bouteilles / canettes (cols)
     saisi_par     = Column(String(100), nullable=True)
     created_at    = Column(DateTime, default=func.now())
-    arret_planifie = Column(Boolean, default=False)  # True = entretien hebdomadaire planifié
+    arret_planifie = Column(Boolean, default=False)  # True = entretien hebdomadaire planifié

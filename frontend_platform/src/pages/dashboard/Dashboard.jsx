@@ -23,15 +23,15 @@ function useIsMobile() {
 }
 
 // ── CONSTANTES ────────────────────────────────────────────
-const ATELIERS = ['Chaîne 8','Chaîne 13','Chaîne 14','Chaîne 15','Chaîne 16'];
+const ATELIERS = ['Chaîne 8','Chaine 13','Chaîne 14','Chaîne 15','Chaîne 16'];
 const OBJECTIFS = {
   'Chaîne 8':  3500,
-  'Chaîne 13': 1000,
+  'Chaine 13': 1000,
   'Chaîne 14': 2500,
   'Chaîne 15': 3500,
   'Chaîne 16': 3000,
 };
-const OBJECTIF_TOTAL = 13500;
+const OBJECTIF_TOTAL = 15200;
 const ORDRE_QUART = { '6h-14h':1, '14h-22h':2, '22h-6h':3 };
 
 function getJMoins1() {
@@ -210,7 +210,12 @@ export default function Dashboard() {
 
   // Relevés attendus J-1 : 5 chaînes × 3 quarts = 15
   const RELEVES_ATTENDUS = 15;
-  const nbRelevesJm1     = relevesJm1.length;
+  // Une saisie « Journée complète » compte pour les 3 quarts de la chaîne
+  const nbRelevesJm1     = ATELIERS.reduce((s, a) => {
+    const rs = relevesJm1.filter(r => r.atelier === a);
+    if(rs.some(r => r.quart === 'Journée complète')) return s + 3;
+    return s + Math.min(3, rs.length);
+  }, 0);
   const pctSaisie        = Math.round(nbRelevesJm1 / RELEVES_ATTENDUS * 100);
 
   // Production par chaîne J-1

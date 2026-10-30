@@ -11,7 +11,7 @@ function useIsMobile() {
   return useState(() => window.innerWidth < 768)[0];
 }
 
-const ATELIERS = ['Chaîne 8','Chaîne 14','Chaîne 15','Chaîne 16'];
+const ATELIERS = ['Chaîne 8', 'Chaine 13', 'Chaîne 14','Chaîne 15','Chaîne 16'];
 
 const NORMES = {
   brix:        { min:10.5, max:11.5, cible:11.0, unite:'°Bx',  label:'Brix' },
