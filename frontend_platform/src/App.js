@@ -24,6 +24,7 @@ import AnalyseQualite   from './pages/qualite/AnalyseQualite';
 
 // Rôles
 const TOUS     = ['contremaitre', 'chef_atelier', 'manager'];
+const AVEC_OP  = ['operateur', 'contremaitre', 'chef_atelier', 'manager'];
 const MANAGERS = ['manager'];
 
 function PrivateRoute({ children, roles }) {
@@ -63,7 +64,7 @@ function AppRoutes() {
           <PrivateRoute roles={TOUS}><EnergieAccueil /></PrivateRoute>
         } />
         <Route path="energie/releves" element={
-          <PrivateRoute roles={TOUS}><SaisieEnergie /></PrivateRoute>
+          <PrivateRoute roles={AVEC_OP}><SaisieEnergie /></PrivateRoute>
         } />
         <Route path="energie/analyse" element={
           <PrivateRoute roles={TOUS}><AnalyseEnergie /></PrivateRoute>
@@ -74,7 +75,7 @@ function AppRoutes() {
           <PrivateRoute roles={TOUS}><QualiteAccueil /></PrivateRoute>
         } />
         <Route path="qualite/data" element={
-          <PrivateRoute roles={TOUS}><DataQualite /></PrivateRoute>
+          <PrivateRoute roles={AVEC_OP}><DataQualite /></PrivateRoute>
         } />
         <Route path="qualite/affichage" element={
           <PrivateRoute roles={TOUS}><AffichageQualite /></PrivateRoute>
@@ -90,7 +91,7 @@ function AppRoutes() {
 
         {/* Alertes — tous */}
         <Route path="alertes" element={
-          <PrivateRoute roles={TOUS}><Alertes /></PrivateRoute>
+          <PrivateRoute roles={AVEC_OP}><Alertes /></PrivateRoute>
         } />
 
         {/* Maintenance Prédictive IA — tous */}

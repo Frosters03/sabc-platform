@@ -82,6 +82,12 @@ function useNavItems() {
     return () => { actif = false; clearInterval(t); };
   }, []);
   items.push({ path:'/dashboard',   icon:IconDashboard, label:'Tableau de bord', short:'Accueil' });
+  if (hasRole('operateur')) {
+    items.push({ path:'/energie/releves', icon:IconBolt,    label:'Énergie', short:'Énergie' });
+    items.push({ path:'/qualite/data',    icon:IconScience, label:'Qualité', short:'Qualité' });
+    items.push({ path:'/alertes',         icon:IconBell,    label:'Alertes',
+                 badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
+  }
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
     items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
     items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
@@ -103,6 +109,7 @@ function Sidebar({ items, T }) {
     manager:      'Manager',
     chef_atelier: "Chef d'atelier",
     contremaitre: 'Contremaître',
+    operateur:    'Opérateur',
   };
 
   return (
@@ -159,7 +166,7 @@ function Sidebar({ items, T }) {
         </div>
 
         {items.map((item) => {
-          const active  = location.pathname === item.path;
+          const active  = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
           const NavIcon = item.icon;
           return (
             <button
@@ -309,6 +316,7 @@ function Header({ T, dark, toggleDark, title }) {
     manager:      'Manager',
     chef_atelier: "Chef d'atelier",
     contremaitre: 'Contremaître',
+    operateur:    'Opérateur',
   };
 
   return (
@@ -387,7 +395,7 @@ function BottomNavbar({ items, T }) {
       boxShadow:'0 -4px 24px rgba(0,0,0,0.07)',
     }}>
       {items.map((item) => {
-        const active  = location.pathname === item.path;
+        const active  = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
         const NavIcon = item.icon;
         return (
           <button
@@ -445,6 +453,7 @@ function MobileHeader({ T, dark, toggleDark, title }) {
     manager:      'Manager',
     chef_atelier: "Chef d'atelier",
     contremaitre: 'Contremaître',
+    operateur:    'Opérateur',
   };
 
   return (

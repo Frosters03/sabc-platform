@@ -17,6 +17,10 @@ from services.ia_service import (
     calculer_oee, predire_energie, analyse_complete
 )
 
+from .auth import require_role
+
+PERSONNEL = ("contremaitre", "chef_atelier", "manager")
+
 router = APIRouter(prefix="/api/maintenance", tags=["Maintenance Prédictive"])
 
 ATELIERS = ["Chaîne 8", "Chaîne 14", "Chaîne 15", "Chaîne 16"]
@@ -25,7 +29,7 @@ ATELIERS = ["Chaîne 8", "Chaîne 14", "Chaîne 15", "Chaîne 16"]
 # ENDPOINTS ANALYSE (déclenchent les algorithmes IA)
 # ════════════════════════════════════════════════════════════
 
-@router.post("/analyser/{atelier}")
+@router.post("/analyser/{atelier}", dependencies=[Depends(require_role(*PERSONNEL))])
 def lancer_analyse(
     atelier: str,
     db: Session = Depends(get_db),
@@ -38,7 +42,7 @@ def lancer_analyse(
     return analyse_complete(db, atelier)
 
 
-@router.post("/analyser-tous")
+@router.post("/analyser-tous", dependencies=[Depends(require_role(*PERSONNEL))])
 def lancer_analyse_tous(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user),
@@ -54,7 +58,7 @@ def lancer_analyse_tous(
 # ENDPOINTS LECTURE (retournent les résultats stockés)
 # ════════════════════════════════════════════════════════════
 
-@router.get("/anomalies")
+@router.get("/anomalies", dependencies=[Depends(require_role(*PERSONNEL))])
 def get_anomalies(
     atelier:      Optional[str]  = Query(None),
     seulement_anomalies: bool    = Query(False),
@@ -121,7 +125,7 @@ def get_scores_sante(
     return scores
 
 
-@router.get("/oee")
+@router.get("/oee", dependencies=[Depends(require_role(*PERSONNEL))])
 def get_oee(
     atelier:  Optional[str] = Query(None),
     nb_jours: int           = Query(30),
@@ -154,7 +158,7 @@ def get_oee(
     } for r in resultats]
 
 
-@router.get("/previsions")
+@router.get("/previsions", dependencies=[Depends(require_role(*PERSONNEL))])
 def get_previsions(
     atelier: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -190,7 +194,7 @@ def get_previsions(
         "borne_sup":      r.borne_sup,
     } for r in resultats]
 
-@router.get("/dashboard-resume")
+@router.get("/dashboard-resume", dependencies=[Depends(require_role(*PERSONNEL))])
 def get_dashboard_resume(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user),

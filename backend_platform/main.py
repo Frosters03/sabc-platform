@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from core.database import create_tables
 from core.config import settings
+from api.routes.auth import require_role
 from api.routes import (
     auth_router,
     energie_router,
@@ -98,8 +99,8 @@ app.include_router(qualite_router,   prefix="/api")
 app.include_router(alertes_router,   prefix="/api")
 
 # ── Module RH ─────────────────────────────────────────────
-app.include_router(equipes_router,   prefix="/api")
-app.include_router(pointages_router, prefix="/api")
+app.include_router(equipes_router,   prefix="/api", dependencies=[Depends(require_role("contremaitre", "chef_atelier", "manager"))])
+app.include_router(pointages_router, prefix="/api", dependencies=[Depends(require_role("contremaitre", "chef_atelier", "manager"))])
 
 # ── Module IA — Maintenance Prédictive ───────────────────
 app.include_router(maintenance_router)  # prefix déjà défini dans le router

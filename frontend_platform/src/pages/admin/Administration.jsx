@@ -6,14 +6,14 @@ import { equipesAPI, pointagesAPI } from '../../services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const ROLES = ["manager", "chef_atelier", "contremaitre"];
+const ROLES = ["manager", "chef_atelier", "contremaitre", "operateur"];
 const ROLE_LABELS = {
   manager: "Manager", chef_atelier: "Chef d'atelier",
-  contremaitre: "Contremaitre",
+  contremaitre: "Contremaitre", operateur: "Opérateur",
 };
 const ROLE_COLORS = {
   chef_atelier: "#10B981",
-  contremaitre: "#3B82F6", manager: "#DA291C",
+  contremaitre: "#3B82F6", manager: "#DA291C", operateur: "#8B5CF6",
 };
 const CHAINES = ["Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
 

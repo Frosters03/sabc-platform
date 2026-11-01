@@ -344,10 +344,10 @@ export default function Dashboard() {
                   Santé des chaînes · IA
                 </h3>
               </div>
-              <span onClick={() => navigate('/maintenance')}
+              {user?.role !== 'operateur' && <span onClick={() => navigate('/maintenance')}
                 style={{ fontSize:12, color:T.primary, cursor:'pointer', fontWeight:600 }}>
                 Détails →
-              </span>
+              </span>}
             </div>
 
             <div style={{

@@ -116,9 +116,9 @@ def get_releve(
 def supprimer_releve(
     releve_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
-    """Supprime un relevé qualité — admin seulement"""
+    """Supprime un relevé qualité — manager seulement"""
     releve = db.query(Qualite).filter(Qualite.id == releve_id).first()
     if not releve:
         raise HTTPException(status_code=404, detail="Relevé non trouvé")

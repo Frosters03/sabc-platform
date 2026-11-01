@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -23,8 +23,14 @@ class UtilisateurCreate(BaseModel):
     username: str
     password: str
     role: str
-    # Rôles acceptés :
-    # "contremaitre" / "chef_atelier" / "manager"
+    # Rôles acceptés : "operateur" / "contremaitre" / "chef_atelier" / "manager"
+
+    @field_validator("role")
+    @classmethod
+    def role_valide(cls, v):
+        if v not in ("operateur", "contremaitre", "chef_atelier", "manager"):
+            raise ValueError("Rôle invalide")
+        return v
 
 class UtilisateurUpdate(BaseModel):
     """Pour modifier un utilisateur — tous les champs optionnels"""

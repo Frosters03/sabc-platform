@@ -99,9 +99,9 @@ def get_releve(
 def supprimer_releve(
     releve_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin"))
+    current_user: Utilisateur = Depends(require_role("manager"))
 ):
-    """Supprime un relevé — admin seulement"""
+    """Supprime un relevé — manager seulement"""
     releve = db.query(LeanEnergie).filter(LeanEnergie.id == releve_id).first()
     if not releve:
         raise HTTPException(status_code=404, detail="Relevé non trouvé")

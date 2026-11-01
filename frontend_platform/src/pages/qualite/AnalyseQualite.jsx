@@ -152,21 +152,6 @@ export default function AnalyseQualite() {
             {[7,14,30,60,90].map(n=><option key={n} value={n}>{n}j</option>)}
           </select>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <select value={atelier} onChange={e=>setAtelier(e.target.value)}
-            style={{ padding:'8px 12px', borderRadius:8,
-              border:`1px solid ${T.border}`, background:T.card,
-              color:T.text, fontSize:12, cursor:'pointer' }}>
-            <option value="Tous">Toutes chaînes</option>
-            {ATELIERS.map(a=><option key={a} value={a}>{a}</option>)}
-          </select>
-          <select value={nbJours} onChange={e=>setNbJours(+e.target.value)}
-            style={{ padding:'8px 12px', borderRadius:8,
-              border:`1px solid ${T.border}`, background:T.card,
-              color:T.text, fontSize:12, cursor:'pointer' }}>
-            {[7,14,30,60,90].map(n=><option key={n} value={n}>{n}j</option>)}
-          </select>
-        </div>
 
       {loading && (
         <div style={{ textAlign:'center', padding:'40px 0',

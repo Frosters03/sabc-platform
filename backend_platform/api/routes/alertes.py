@@ -65,9 +65,9 @@ def count_alertes(
 def supprimer_alerte(
     alerte_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(require_role("admin", "chef_atelier"))
+    current_user: Utilisateur = Depends(require_role("manager", "chef_atelier", "contremaitre"))
 ):
-    """Supprime une alerte — admin et chef_atelier seulement"""
+    """Supprime une alerte — manager, chef_atelier et contremaitre (pas operateur)"""
     alerte = db.query(Alerte).filter(Alerte.id == alerte_id).first()
     if not alerte:
         raise HTTPException(status_code=404, detail="Alerte non trouvée")

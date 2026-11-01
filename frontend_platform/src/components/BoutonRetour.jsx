@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from './layout/Layout';
+import { useAuth } from '../context/AuthContext';
 
 export default function BoutonRetour({ vers, titre }) {
   const navigate = useNavigate();
   const { T }    = useTheme();
+  const { user } = useAuth();
+  const cible    = user?.role === 'operateur' ? '/dashboard' : vers;
 
   return (
     <div style={{
@@ -12,7 +15,7 @@ export default function BoutonRetour({ vers, titre }) {
       borderBottom:`1px solid ${T.border}`,
     }}>
       <button
-        onClick={() => vers ? navigate(vers) : navigate(-1)}
+        onClick={() => cible ? navigate(cible) : navigate(-1)}
         style={{
           background: T.borderSoft,
           border: `1px solid ${T.border}`,
