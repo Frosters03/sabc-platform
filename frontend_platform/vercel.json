@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://sabc-platform.onrender.com/api/:path*" },
+    { "source": "/api/(.*)", "destination": "https://sabc-platform.onrender.com/api/$1" },
     { "source": "/((?!api/|static/).*)", "destination": "/index.html" }
   ]
 }
