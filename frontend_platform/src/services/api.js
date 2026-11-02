@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // URL de base de notre API FastAPI
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// En ligne (vercel.app) : passer par le proxy Vercel (/api) pour eviter un acces direct a onrender.com
+const API_URL = (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app'))
+  ? '/api'
+  : (process.env.REACT_APP_API_URL || 'http://localhost:8000/api');
 
 // Instance axios configurée
 const api = axios.create({
