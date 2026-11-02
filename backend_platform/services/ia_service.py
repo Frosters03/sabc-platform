@@ -340,7 +340,7 @@ def generer_message_xai(atelier, jour, est_anomalie,
     e_bain    = ecart_pct("index_eau_bain")
     e_rincage = ecart_pct("index_eau_rincage")
     e_prod    = ecart_pct("production_hl")
-    e_brix    = row.get("brix", 11.0) - 11.0
+    e_brix    = row.get("brix", 12.0) - 12.0
 
     if e_elec > seuil:
         causes.append(
@@ -375,10 +375,10 @@ def generer_message_xai(atelier, jour, est_anomalie,
             f"Sertissage hors tolerance : {e_sertissage:.1f}% des mesures non conformes "
             f"-> Usure des rouleaux probable — verifier la sertisseuse"
         )
-    if abs(e_brix) > 0.5:
+    if abs(e_brix) > 1.0:
         direction = "trop élevé" if e_brix > 0 else "trop bas"
         causes.append(
-            f"Brix {row.get('brix',0):.2f}°Bx ({direction}, norme 10.5–11.5) "
+            f"Brix {row.get('brix',0):.2f}°Bx ({direction}, norme 11.0–13.0) "
             f"→ Vérifier dosage et capteur Brix"
         )
 

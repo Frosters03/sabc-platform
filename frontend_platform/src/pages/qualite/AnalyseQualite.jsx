@@ -14,7 +14,7 @@ function useIsMobile() {
 const ATELIERS = ['Chaîne 8', 'Chaine 13', 'Chaîne 14','Chaîne 15','Chaîne 16'];
 
 const NORMES = {
-  brix:        { min:10.5, max:11.5, cible:11.0, unite:'°Bx',  label:'Brix' },
+  brix:        { min:11.0, max:13.0, cible:12.0, unite:'°Bx',  label:'Brix' },
   co2_qualite: { min:5.0,  max:6.0,  cible:5.5,  unite:'g/L',  label:'CO₂ qualité' },
   bo2:         { min:0.0,  max:0.10, cible:0.05, unite:'mg/L', label:'BO₂' },
 };
@@ -72,7 +72,7 @@ export default function AnalyseQualite() {
     const ecartType= Math.sqrt(vals.reduce((a,b)=>a+(b-moy)**2,0)/vals.length);
     const conformes= vals.filter(v => v >= norme.min && v <= norme.max).length;
     return {
-      key, ...norme, vals,
+      key, ...norme, vals, normeMin:norme.min, normeMax:norme.max,
       moy:       +moy.toFixed(3),
       ecartType: +ecartType.toFixed(3),
       conformes,
@@ -105,7 +105,7 @@ export default function AnalyseQualite() {
     const co2Vals  = d.map(x=>x.co2_qualite).filter(Boolean);
     const avg = arr => arr.length ? +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : 0;
     const pctBrix = brixVals.length
-      ? Math.round(brixVals.filter(v=>v>=10.5&&v<=11.5).length/brixVals.length*100) : 0;
+      ? Math.round(brixVals.filter(v=>v>=NORMES.brix.min&&v<=NORMES.brix.max).length/brixVals.length*100) : 0;
     return {
       atelier: a.replace('Chaîne ','Ch.'),
       'Brix moy': avg(brixVals),
@@ -118,7 +118,7 @@ export default function AnalyseQualite() {
   const parJour = {};
   donnees.forEach(d => {
     if (!parJour[d.date]) parJour[d.date] = { brix:[], co2:[] };
-    if (d.brix)        parJour[d.date].brix.push(d.brix >= 10.5 && d.brix <= 11.5 ? 1 : 0);
+    if (d.brix)        parJour[d.date].brix.push(d.brix >= NORMES.brix.min && d.brix <= NORMES.brix.max ? 1 : 0);
     if (d.co2_qualite) parJour[d.date].co2.push(d.co2_qualite >= 5.0 && d.co2_qualite <= 6.0 ? 1 : 0);
   });
   const evolutionConf = Object.entries(parJour)
@@ -166,7 +166,7 @@ export default function AnalyseQualite() {
           {[...stats, sertConf !== null ? {
             label:'Sertissage', unite:'', pctConf:sertConf,
             moy:null, ecartType:null, min:null, max:null,
-          } : null].filter(Boolean).map((s,i) => {
+          } : null].filter(s => s && s.pctConf !== undefined && s.pctConf !== null).map((s,i) => {
             const color = s.pctConf>=95?'#10B981':s.pctConf>=80?'#F59E0B':'#EF4444';
             return (
               <div key={i} style={{ background:T.card, borderRadius:12,
@@ -216,7 +216,7 @@ export default function AnalyseQualite() {
                     <tr key={i} style={{ background:i%2===0?T.bg:T.card }}>
                       <td style={{ padding:'8px 12px', fontWeight:600, color:T.text }}>{s.label}</td>
                       <td style={{ padding:'8px 12px', textAlign:'center', color:T.textSoft,fontSize:10 }}>
-                        [{s.min} – {s.max}] {s.unite}
+                        [{s.normeMin} – {s.normeMax}] {s.unite}
                       </td>
                       <td style={{ padding:'8px 12px', textAlign:'center',
                         fontWeight:700, color:T.text }}>{s.moy} {s.unite}</td>
