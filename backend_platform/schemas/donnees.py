@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, Any
 from datetime import date, datetime
+
+QUARTS_VALIDES = ("6h-14h", "14h-22h", "22h-6h")
 
 # ─── LEAN ÉNERGIE ─────────────────────────────────────────
 
@@ -28,6 +30,13 @@ class LeanEnergieCreate(BaseModel):
 
     production_hl:      Optional[float] = None   # hl de la veille
     production_cols:    Optional[float] = None   # nombre de cols (bouteilles / canettes)
+
+    @field_validator("quart")
+    @classmethod
+    def _quart_valide(cls, v):
+        if v not in QUARTS_VALIDES:
+            raise ValueError("Quart invalide : choisir 6h-14h, 14h-22h ou 22h-6h")
+        return v
 
 class LeanEnergieResponse(LeanEnergieCreate):
     """Ce qu'on renvoie — avec en plus les consommations calculées"""
@@ -93,6 +102,13 @@ class QualiteCreate(BaseModel):
     co2_qualite:     Optional[float] = None
     bo2:             Optional[float] = None
 
+    @field_validator("quart")
+    @classmethod
+    def _quart_valide(cls, v):
+        if v not in QUARTS_VALIDES:
+            raise ValueError("Quart invalide : choisir 6h-14h, 14h-22h ou 22h-6h")
+        return v
+
 class QualiteResponse(QualiteCreate):
     id:         int
     saisi_par:  Optional[str]      = None
@@ -138,6 +154,13 @@ class QualiteACreate(BaseModel):
     debit_co2_balayage: Optional[float] = None
 
     sertissage_data: Optional[str] = None
+
+    @field_validator("quart")
+    @classmethod
+    def _quart_valide(cls, v):
+        if v not in QUARTS_VALIDES:
+            raise ValueError("Quart invalide : choisir 6h-14h, 14h-22h ou 22h-6h")
+        return v
 
 class QualiteAResponse(QualiteACreate):
     id:         int

@@ -55,7 +55,7 @@ FEATURES = [
 # ════════════════════════════════════════════════════════════
 
 # Ordre chronologique des saisies d'une même date
-ORDRE_QUART = {"6h-14h": 1, "14h-22h": 2, "22h-6h": 3, "Journée complète": 4}
+ORDRE_QUART = {"6h-14h": 1, "14h-22h": 2, "22h-6h": 3}
 
 # Compteurs cumulés (index) : la consommation = index actuel − index précédent.
 # Les valeurs sont toujours stockées en m³ (conversion m³ / dm³ faite à la saisie).

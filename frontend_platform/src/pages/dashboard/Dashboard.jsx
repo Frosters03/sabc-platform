@@ -210,10 +210,9 @@ export default function Dashboard() {
 
   // Relevés attendus J-1 : 5 chaînes × 3 quarts = 15
   const RELEVES_ATTENDUS = 15;
-  // Une saisie « Journée complète » compte pour les 3 quarts de la chaîne
+  // 3 quarts par chaîne : 6h-14h, 14h-22h, 22h-6h
   const nbRelevesJm1     = ATELIERS.reduce((s, a) => {
     const rs = relevesJm1.filter(r => r.atelier === a);
-    if(rs.some(r => r.quart === 'Journée complète')) return s + 3;
     return s + Math.min(3, rs.length);
   }, 0);
   const pctSaisie        = Math.round(nbRelevesJm1 / RELEVES_ATTENDUS * 100);

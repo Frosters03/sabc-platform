@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import date, datetime
+
+QUARTS_VALIDES = ("6h-14h", "14h-22h", "22h-6h")
 
 # ── ÉQUIPE ────────────────────────────────────────────────
 
@@ -68,6 +70,13 @@ class PointageCreate(BaseModel):
     equipe_nom: str
     quart:      str
     lignes:     List[LignePointageCreate]
+
+    @field_validator("quart")
+    @classmethod
+    def _quart_valide(cls, v):
+        if v not in QUARTS_VALIDES:
+            raise ValueError("Quart invalide : choisir 6h-14h, 14h-22h ou 22h-6h")
+        return v
 
 class PointageResponse(BaseModel):
     id:         int

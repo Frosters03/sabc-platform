@@ -15,11 +15,9 @@ from .auth import get_current_user, require_role, log_action
 router = APIRouter(prefix="/pointages", tags=["Pointages"])
 
 HEURES_QUART = {
-    "7h-19h":  12,
-    "19h-7h":  12,
-    "7h-14h":  7,
-    "14h-21h": 7,
-    "21h-7h":  10,
+    "6h-14h":  8,
+    "14h-22h": 8,
+    "22h-6h":  8,
 }
 
 
@@ -1234,10 +1232,7 @@ def rapport_absences_non_justifiees(
                         "details":      [],
                     }
                 rapport[cle]["nb_absences"]  += 1
-                rapport[cle]["heures_total"] += ptg.quart and {
-                    "7h-19h": 12, "19h-7h": 12,
-                    "7h-14h": 7,  "14h-21h": 7, "21h-7h": 10,
-                }.get(ptg.quart, 8) or 8
+                rapport[cle]["heures_total"] += HEURES_QUART.get(ptg.quart, 8)
                 rapport[cle]["details"].append({
                     "date":  str(ptg.date),
                     "quart": ptg.quart,

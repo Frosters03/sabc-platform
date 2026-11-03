@@ -18,11 +18,8 @@ function useIsMobile() {
 }
 
 const CHAINES = ["Chaîne 8","Chaîne 13","Chaîne 14","Chaîne 15","Chaîne 16"];
-const QUARTS  = ["7h-19h","19h-7h","7h-14h","14h-21h","21h-7h"];
-const HEURES_QUART = {
-  "7h-19h": 12, "19h-7h": 12,
-  "7h-14h": 7,  "14h-21h": 7, "21h-7h": 10,
-};
+const QUARTS  = ["6h-14h","14h-22h","22h-6h"];
+const HEURES_QUART = { "6h-14h": 8, "14h-22h": 8, "22h-6h": 8 };
 const OPTIONS_PRESENCE = [
   { val:"P",  label:"P — Présence" },
   { val:"AA", label:"AA — Autorisation d'absence" },
@@ -49,7 +46,7 @@ export default function SaisiePointage() {
   // Filtres
   const [date,      setDate]      = useState(today());
   const [chaine,    setChaine]    = useState("Chaîne 8");
-  const [quart,     setQuart]     = useState("7h-14h");
+  const [quart,     setQuart]     = useState("6h-14h");
   const [equipeId,  setEquipeId]  = useState("");
 
   // Données
@@ -220,7 +217,7 @@ export default function SaisiePointage() {
           <div>
             <label style={LS}>Quart</label>
             <select value={quart} onChange={e => setQuart(e.target.value)} style={IS}>
-              {QUARTS.map(q => <option key={q}>{q} — {HEURES_QUART[q]}h</option>)}
+              {QUARTS.map(q => <option key={q} value={q}>{q} — {HEURES_QUART[q]}h</option>)}
             </select>
           </div>
           <div>

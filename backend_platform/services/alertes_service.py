@@ -42,10 +42,7 @@ SEUILS = {
 }
 
 # Durée (en heures) couverte par un relevé selon son quart
-HEURES_RELEVE = {
-    "6h-14h": 8, "14h-22h": 8, "22h-6h": 8,
-    "Journée complète": 24,
-}
+HEURES_RELEVE = {"6h-14h": 8, "14h-22h": 8, "22h-6h": 8}
 
 SEUILS_QUALITE = {
     "brix": {
@@ -108,7 +105,7 @@ NOUVEAUX = {
     },
 }
 
-ORDRE_QUART = {"6h-14h": 1, "14h-22h": 2, "22h-6h": 3, "Journée complète": 4}
+ORDRE_QUART = {"6h-14h": 1, "14h-22h": 2, "22h-6h": 3}
 
 
 def _nb_cols(releve, atelier: str) -> float:

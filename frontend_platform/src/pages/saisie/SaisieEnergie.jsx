@@ -197,8 +197,8 @@ export default function SaisieEnergie() {
 
   const ateliers = ['Chaîne 8', 'Chaine 13', 'Chaîne 14', 'Chaîne 15', 'Chaîne 16'];
   const showFormatSelector = ['Chaîne 15', 'Chaîne 16'].includes(form.atelier);
-  // Saisie par quart OU en une seule fois pour la journée complète (24h)
-  const quarts   = ['22h-6h', '6h-14h', '14h-22h', 'Journée complète'];
+  // 3 quarts uniquement : 6h-14h, 14h-22h, 22h-6h
+  const quarts   = ['6h-14h', '14h-22h', '22h-6h'];
 
   const valider = () => {
     const champsCommuns = [
