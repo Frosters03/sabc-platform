@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date, timedelta
 import io
+from openpyxl.worksheet.properties import PageSetupProperties
 
 from core.database import get_db
 from models.pointage import Pointage, LignePointage
@@ -13,6 +14,17 @@ from schemas.pointage import PointageCreate, PointageResponse
 from .auth import get_current_user, require_role, log_action
 
 router = APIRouter(prefix="/pointages", tags=["Pointages"])
+
+def _content_disposition(filename: str) -> str:
+    """En-tête de téléchargement sûr : nom entre guillemets, repli ASCII et
+    version UTF-8 (RFC 5987) pour les accents et espaces (ex. « Chaîne 15 »)."""
+    import unicodedata
+    from urllib.parse import quote
+    ascii_name = (unicodedata.normalize("NFKD", filename)
+                  .encode("ascii", "ignore").decode("ascii")
+                  .replace('"', "").replace("\\", "").replace(" ", "_"))
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+
 
 HEURES_QUART = {
     "6h-14h":  8,
@@ -136,7 +148,10 @@ def export_excel_semaine(
         d = p.date
         par_date[d] = p
 
-    membres = sorted(equipe.membres, key=lambda m: m.ordre)
+    membres = sorted(
+        [m for m in equipe.membres if (m.statut or 'titulaire') == 'titulaire' and m.actif != False],
+        key=lambda m: m.ordre
+    )
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -374,7 +389,7 @@ def export_excel_semaine(
     # ── LIGNE 30 : TOTAUX ─────────────────────────────────
     R_T = 30
     mc(R_T, 1, R_T, 2, "", border=b_thick)
-    for col in range(3, 29):
+    for col in range(3, 28):
         cl = get_column_letter(col)
         ws.cell(R_T, col).value = f"=SUM({cl}{ROW_S}:{cl}{ROW_E})"
         st(ws.cell(R_T,col), bold=True, size=9,
@@ -404,7 +419,7 @@ def export_excel_semaine(
     # ── MISE EN PAGE ──────────────────────────────────────
     ws.page_setup.orientation = "landscape"
     ws.page_setup.paperSize   = ws.PAPERSIZE_A3
-    ws.page_setup.fitToPage   = True
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
     ws.page_setup.fitToWidth  = 1
     ws.page_setup.fitToHeight = 0
     ws.print_area = "A1:AB39"
@@ -418,7 +433,7 @@ def export_excel_semaine(
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": _content_disposition(filename)}
     )
 
 @router.get("/export-excel-am")
@@ -713,7 +728,7 @@ def export_excel_am(
     # ── MISE EN PAGE ──────────────────────────────────────
     ws.page_setup.orientation = "landscape"
     ws.page_setup.paperSize   = ws.PAPERSIZE_A4
-    ws.page_setup.fitToPage   = True
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
     ws.page_setup.fitToWidth  = 1
     ws.page_setup.fitToHeight = 0
 
@@ -726,7 +741,7 @@ def export_excel_am(
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": _content_disposition(filename)}
     )
 
 @router.get("/export-excel-pepiniere")
@@ -764,8 +779,12 @@ def export_excel_pepiniere(
     sem_num = date_lundi.isocalendar()[1]
     ws.title = f"SEM{sem_num:02d}"
 
-    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
-    ws.page_setup.paperSize   = 8  # A3
+    ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+    ws.page_setup.paperSize   = 9  # A4 (comme l'exemple)
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    ws.page_setup.fitToWidth  = 1
+    ws.page_setup.fitToHeight = 1
+    ws.print_area = 'A1:V31'
 
     # ── STYLES ──────────────────────────────────────────
     thin  = Side(style="thin",   color="000000")
@@ -792,7 +811,7 @@ def export_excel_pepiniere(
 
     # ── LARGEURS COLONNES (exactes depuis référence) ─────
     widths = {
-        'A':1.85,'B':3.28,'C':5.42,'D':20.28,
+        'A':4.5,'B':6.0,'C':9.0,'D':22.0,
         'E':6.71,'F':4.71,'G':6.71,'H':4.71,'I':6.71,'J':5.14,
         'K':6.71,'L':4.71,'M':6.71,'N':4.71,'O':6.71,'P':4.71,
         'Q':6.71,'R':4.71,'S':1.14,'T':6.0,'U':5.14,'V':10.28,
@@ -816,7 +835,7 @@ def export_excel_pepiniere(
     # ── LIGNE 4: Chaine / Equipe / Date ─────────────────
     chain_nom = equipe.chaine if equipe.chaine else ''
     mc(4,8,4,9,  'Chaine:',  bold=True, size=9, border=b_tn)
-    wc(4,10,     chain_nom,   bold=True, size=9, border=b_tn)
+    mc(4,10,4,11, chain_nom,  bold=True, size=9, border=b_tn)
     mc(4,13,4,14,'Equipe:',      bold=True, size=9, border=b_tn)
     mc(4,15,4,20, equipe.nom,    bold=True, size=9, border=b_tn)
     mc(4,21,4,22, date_lundi,    bold=True, size=9, border=b_tn)
@@ -995,7 +1014,7 @@ def export_excel_pepiniere(
     return StreamingResponse(
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={'Content-Disposition': f'attachment; filename="Pointage_Pepiniere_{date_lundi}.xlsx"'}
+        headers={'Content-Disposition': _content_disposition(f"Pointage_Pepiniere_{date_lundi}.xlsx")}
     )
 
 @router.get("/export-excel-occasionnel")
@@ -1178,8 +1197,11 @@ def export_excel_occasionnel(
         mc(ws, 27,7, 27,9, '', border=b_tn)
 
         # Mise en page
-        ws.page_setup.orientation = "portrait"
+        ws.page_setup.orientation = "landscape"
         ws.page_setup.paperSize   = 9   # A4
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+        ws.page_setup.fitToWidth  = 1
+        ws.page_setup.fitToHeight = 1
 
     # ── EXPORT ───────────────────────────────────────────
     output = io.BytesIO()
@@ -1192,7 +1214,7 @@ def export_excel_occasionnel(
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition':
-                 f'attachment; filename="Pointage_Occasionnel_SEM{sem_num}_{date_lundi}.xlsx"'}
+                 _content_disposition(f"Pointage_Occasionnel_SEM{sem_num}_{date_lundi}.xlsx")}
     )
 
 @router.get("/rapport-ab")
@@ -1241,4 +1263,4 @@ def rapport_absences_non_justifiees(
     
     # Trier par nb absences décroissant
     result = sorted(rapport.values(), key=lambda x: x["nb_absences"], reverse=True)
-    return result
+    return result
