@@ -114,7 +114,7 @@ export default function SplashScreen({ onFinish }) {
           letterSpacing: 0.5,
           textTransform: 'uppercase',
         }}>
-          Packaging Platform
+          Production Manager
         </p>
 
         {/* Slogan */}
@@ -168,4 +168,4 @@ export default function SplashScreen({ onFinish }) {
       </p>
     </div>
   );
-}
+}

@@ -91,7 +91,7 @@ function useNavItems() {
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
     items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
     items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
-    items.push({ path:'/pointage',    icon:IconClipboard, label:'Pointage' });
+    items.push({ path:'/pointage',    icon:IconClipboard, label:'RH' });
     items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes',
                  badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
     items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA', short:'Maint. IA' });
@@ -152,7 +152,7 @@ function Sidebar({ items, T }) {
         </div>
         <div>
           <div style={{ fontSize:15, fontWeight:700, color:T.text, letterSpacing:0.5 }}>SABC</div>
-          <div style={{ fontSize:10, color:T.textSoft, marginTop:1 }}>Packaging Platform</div>
+          <div style={{ fontSize:10, color:T.textSoft, marginTop:1 }}>Production Manager</div>
         </div>
       </div>
 

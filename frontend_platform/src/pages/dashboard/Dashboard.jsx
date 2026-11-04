@@ -32,6 +32,11 @@ const OBJECTIFS = {
   'Chaîne 16': 3000,
 };
 const OBJECTIF_TOTAL = 15200;
+
+// ── MODE DÉMO ÉNERGIE ─────────────────────────────────────
+// true  : cartes Production J-1 / Ratio électricité / Ratio eau / Ratio fuel
+// false : ancien modèle (Production / Alertes / Saisie / Chaînes actives)
+const DEMO_ENERGIE = true;
 const ORDRE_QUART = { '6h-14h':1, '14h-22h':2, '22h-6h':3 };
 
 function getJMoins1() {
@@ -52,6 +57,7 @@ const IconCheck     = ({size=18,color='currentColor'}) => <svg width={size} heig
 const IconTrendUp   = ({size=13,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>;
 const IconTrendDown = ({size=13,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6z"/></svg>;
 const IconDot       = ({size=10,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><circle cx="12" cy="12" r="8"/></svg>;
+const IconFuel = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11A2.5 2.5 0 0 0 16 9.5 2.5 2.5 0 0 0 18.5 12c.36 0 .7-.08 1-.21v7.21a1 1 0 0 1-2 0V14a2 2 0 0 0-2-2h-1V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16h10v-7.5h1.5v5.5a2.5 2.5 0 0 0 5 0V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5z"/></svg>;
 const IconBrain = ({size=18,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>;
 
 // ── KPI CARD ──────────────────────────────────────────────
@@ -173,6 +179,7 @@ export default function Dashboard() {
   const [relevesC8,    setRelevesC8]    = useState([]);
   const [scoresSante, setScoresSante] = useState({});
   const [relevesJm1,   setRelevesJm1]   = useState([]);  // tous ateliers J-1
+  const [relevesRatio, setRelevesRatio] = useState([]);  // fenêtre pour les ratios usine
   const [loading,      setLoading]      = useState(true);
   const [activeBar,    setActiveBar]    = useState(null);
 
@@ -181,17 +188,20 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [alertesRes, countRes, relevesC8Res, relevesJm1Res, scoresRes] = await Promise.all([
+        const dDeb = new Date(); dDeb.setDate(dDeb.getDate() - 4);
+        const [alertesRes, countRes, relevesC8Res, relevesJm1Res, scoresRes, ratioRes] = await Promise.all([
           alertesAPI.lister({ lu: false }),
           alertesAPI.compter(),
           energieAPI.lister({ atelier: 'Chaîne 8' }),
           energieAPI.lister({ date_debut: jm1, date_fin: jm1, limit: 500 }),
           maintenanceAPI.getScoresSante().catch(() => ({ data: {} })),
+          energieAPI.lister({ date_debut: dDeb.toISOString().split('T')[0], limit: 500 }).catch(() => ({ data: [] })),
         ]);
         setAlertes(alertesRes.data.slice(0, 6));
         setNbAlertes(countRes.data.total || 0);
         setRelevesC8(relevesC8Res.data);
         setRelevesJm1(relevesJm1Res.data);
+        setRelevesRatio(ratioRes.data || []);
         setScoresSante(scoresRes.data || {});
       } catch(e) {
         console.error(e);
@@ -216,6 +226,40 @@ export default function Dashboard() {
     return s + Math.min(3, rs.length);
   }, 0);
   const pctSaisie        = Math.round(nbRelevesJm1 / RELEVES_ATTENDUS * 100);
+
+  // ── RATIOS USINE J-1 (toutes chaînes réunies) ───────────
+  // Consommation d'un relevé = index − index du relevé précédent de la même chaîne.
+  // Le quart 22h-6h est rattaché au jour précédent (comme dans Analyse Énergie).
+  const nzf = (v) => { const n = parseFloat(v); return Number.isNaN(n) ? 0 : n; };
+  const dIdx = (a, b) => (a == null || b == null || a === '' || b === '') ? 0 : Math.max(0, nzf(a) - nzf(b));
+  const ratiosUsine = (() => {
+    let prod = 0, elec = 0, eau = 0;
+    ATELIERS.forEach(at => {
+      const rs = relevesRatio
+        .filter(r => r.atelier === at)
+        .sort((a, b) => {
+          const dd = new Date(a.date) - new Date(b.date);
+          return dd !== 0 ? dd : (ORDRE_QUART[a.quart] || 0) - (ORDRE_QUART[b.quart] || 0);
+        });
+      for (let i = 1; i < rs.length; i++) {
+        const c = rs[i], p = rs[i - 1];
+        const pr = parseFloat(c.production_hl);
+        if (!pr) continue;
+        let jour = c.date;
+        if (c.quart === '22h-6h') { const d = new Date(c.date); d.setDate(d.getDate() - 1); jour = d.toISOString().split('T')[0]; }
+        if (jour !== jm1) continue;
+        prod += pr;
+        elec += dIdx(c.index_elec, p.index_elec);
+        eau  += dIdx(c.index_eau_rincage, p.index_eau_rincage) + dIdx(c.index_eau_bain, p.index_eau_bain)
+              + dIdx(c.index_eau_pasteur, p.index_eau_pasteur) + dIdx(c.index_eau_aero, p.index_eau_aero)
+              + dIdx(c.index_eau_soutireuse, p.index_eau_soutireuse) + dIdx(c.index_eau_lubrification, p.index_eau_lubrification);
+      }
+    });
+    return {
+      elec: prod > 0 && elec > 0 ? (elec / prod).toFixed(2) : '—',          // kWh/hl
+      eau:  prod > 0 && eau  > 0 ? ((eau * 10) / prod).toFixed(2) : '—',    // hl d'eau / hl produit
+    };
+  })();
 
   // Production par chaîne J-1
   const prodParChaine = {};
@@ -407,6 +451,29 @@ export default function Dashboard() {
           </div>
         )}
 
+        {DEMO_ENERGIE ? (<>
+        <KpiCard
+          icon={<IconBolt size={isMobile?17:20} color={T.gold}/>}
+          label="Ratio électricité J-1 · usine"
+          value={ratiosUsine.elec} unit="kWh/hl"
+          color={T.gold} progress={ratiosUsine.elec==='—'?1:70}
+          T={T} isMobile={isMobile}
+        />
+        <KpiCard
+          icon={<IconWater size={isMobile?17:20} color={T.primary}/>}
+          label="Ratio eau J-1 · usine"
+          value={ratiosUsine.eau} unit="hl/hl"
+          color={T.primary} progress={ratiosUsine.eau==='—'?1:70}
+          T={T} isMobile={isMobile}
+        />
+        <KpiCard
+          icon={<IconFuel size={isMobile?17:20} color={T.success}/>}
+          label="Ratio fuel J-1 · usine"
+          value="—" unit="L/hl"
+          color={T.success} progress={1}
+          T={T} isMobile={isMobile}
+        />
+        </>) : (<>
         {/* 2 — Alertes */}
         <KpiCard
           icon={<IconBell size={isMobile?17:20} color={nbAlertes>0?T.danger:T.success}/>}
@@ -436,6 +503,7 @@ export default function Dashboard() {
           progress={chainesActives/ATELIERS.length*100}
           T={T} isMobile={isMobile}
         />
+        </>)}
       </div>
 
       {/* GRAPHIQUES */}
@@ -561,4 +629,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+}

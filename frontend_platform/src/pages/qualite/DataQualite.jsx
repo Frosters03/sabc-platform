@@ -496,12 +496,16 @@ function FormulaireVoletA({ T, isMobile }) {
 export default function DataQualite() {
   const { T }    = useTheme();
   const isMobile = useIsMobile();
-  const [onglet, setOnglet] = useState('A');
+  const [onglet, setOnglet] = useState('Bière');
 
   const onglets = [
     { key:'Bière',      label:'Bière',      desc:'Bières alcoolisées', color:'#DA291C' },
     { key:'Alcool Mix', label:'Alcool Mix',  desc:'Boissons maltées',   color:'#10B981' },
     { key:'BRSA',       label:'BRSA',        desc:'Sans alcool',        color:'#3B82F6' },
+    { key:'UP',         label:'UP',          desc:'Unité de pasteurisation', color:'#F59E0B' },
+    { key:'UL',         label:'UL',          desc:'Unité de lavage',    color:'#14B8A6' },
+    { key:'Mireuse',    label:'Mireuse',     desc:'Inspection',         color:'#8B5CF6' },
+    { key:'Sirop',      label:'Sirop',       desc:'Sirop',              color:'#EC4899' },
   ];
 
   return (
@@ -512,17 +516,19 @@ export default function DataQualite() {
       <BoutonRetour vers="/qualite" titre="Data — Saisie Qualité" />
 
       {/* Onglets */}
-      <div style={{ display:'flex', gap:6, marginBottom:20, flexWrap:'wrap' }}>
+      <div style={{ display:'grid', gridTemplateColumns:isMobile?'repeat(4, 1fr)':'repeat(7, 1fr)', gap:6, marginBottom:20 }}>
         {onglets.map(o => (
           <button key={o.key} onClick={() => setOnglet(o.key)} style={{
-            padding:'10px 20px', borderRadius:10, border:'none', cursor:'pointer',
+            padding:'8px 4px', borderRadius:10, border:'none', cursor:'pointer',
+            minHeight:52, minWidth:0, boxSizing:'border-box',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
             background: onglet === o.key ? o.color : T.card,
             color:       onglet === o.key ? '#fff'  : T.textSoft,
             border: `1px solid ${onglet === o.key ? o.color : T.border}`,
-            fontSize:12, fontWeight:600, transition:'all 0.2s',
+            fontSize:isMobile?11:12, fontWeight:600, transition:'all 0.2s',
           }}>
-            <div>{o.label}</div>
-            <div style={{ fontSize:9, opacity:0.8 }}>{o.desc}</div>
+            <div style={{ whiteSpace:'nowrap' }}>{o.label}</div>
+            <div style={{ fontSize:isMobile?8:9, opacity:0.8, maxWidth:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.desc}</div>
           </button>
         ))}
       </div>
@@ -532,7 +538,13 @@ export default function DataQualite() {
         {onglet === 'Bière'    && <FormulaireVoletA     T={T} isMobile={isMobile}/>}
         {onglet === 'Alcool Mix'   && <FormulaireAMBRSA typeVolet="Alcool Mix"   T={T} isMobile={isMobile}/>}
         {onglet === 'BRSA' && <FormulaireAMBRSA typeVolet="BRSA" T={T} isMobile={isMobile}/>}
+        {['UP','UL','Mireuse','Sirop'].includes(onglet) && (
+          <div style={{ textAlign:'center', padding:'48px 16px', color:T.textSoft, fontSize:13,
+            background:T.card, border:`1px dashed ${T.border}`, borderRadius:14 }}>
+            Saisie {onglets.find(o => o.key === onglet)?.label} — bientôt disponible
+          </div>
+        )}
       </div>
     </div>
   );
-}
+}
