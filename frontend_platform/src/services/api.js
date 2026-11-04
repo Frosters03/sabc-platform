@@ -109,6 +109,7 @@ export const pointagesAPI = {
     responseType: 'blob',
   }),
   rapportAB:    (params)  => api.get('/pointages/rapport-ab', { params }),
+  analyseHeuresSupp: (params) => api.get('/pointages/analyse-heures-supp', { params }),
   exportExcelAM: (params) => api.get('/pointages/export-excel-am', {
     params,
     responseType: 'blob',
@@ -131,4 +132,4 @@ export const maintenanceAPI = {
   getResume:     ()        => api.get('/maintenance/dashboard-resume'),
 };
 
-export default api;
+export default api;

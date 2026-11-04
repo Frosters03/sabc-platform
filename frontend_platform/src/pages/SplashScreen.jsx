@@ -125,7 +125,7 @@ export default function SplashScreen({ onFinish }) {
           textAlign: 'center',
           fontStyle: 'italic',
         }}>
-          La bière qui unit les Camerounais
+          L'Usine Industrielle 4.0
         </p>
 
         {/* Barre de progression */}
@@ -168,4 +168,4 @@ export default function SplashScreen({ onFinish }) {
       </p>
     </div>
   );
-}
+}

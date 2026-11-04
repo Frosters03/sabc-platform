@@ -588,7 +588,10 @@ const pageTitles = {
   '/alertes':           'Alertes',
   '/maintenance':       'Maintenance Prédictive IA',
   '/admin/users':       'Administration',
-  '/pointage':          'Pointage Personnel',
+  '/pointage':          'RH',
+  '/pointage/equipes':  "Gestion d'équipe",
+  '/pointage/saisie':   'Pointage Personnel',
+  '/pointage/heures-supp': 'Analyse Heures Supp.',
 };
 
 // ── LAYOUT PRINCIPAL ──────────────────────────────────────

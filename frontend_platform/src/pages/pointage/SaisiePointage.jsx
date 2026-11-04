@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "../../components/layout/Layout";
 import { useAuth } from "../../context/AuthContext";
 import { equipesAPI, pointagesAPI } from "../../services/api";
+import BoutonRetour from "../../components/BoutonRetour";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
@@ -184,10 +185,8 @@ export default function SaisiePointage() {
     <div style={{ padding:isMobile?'16px 14px 90px':'24px 28px', maxWidth:1100, margin:'0 auto' }}>
 
       {/* En-tête */}
+      <BoutonRetour vers="/pointage" titre="Pointage Personnel" />
       <div style={{ marginBottom:20 }}>
-        <h1 style={{ fontSize:isMobile?18:22, fontWeight:700, color:T.text, margin:'0 0 4px' }}>
-          Pointage Personnel
-        </h1>
         <p style={{ fontSize:12, color:T.textSoft, margin:0 }}>
           Service Conditionnement — SABC Ndokoti
         </p>
@@ -510,4 +509,4 @@ export default function SaisiePointage() {
       )}
     </div>
   );
-}
+}

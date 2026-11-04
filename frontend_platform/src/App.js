@@ -14,6 +14,9 @@ import QualiteAccueil  from './pages/qualite/QualiteAccueil';
 import AnalyseEnergie  from './pages/energie/AnalyseEnergie';
 import Administration  from './pages/admin/Administration';
 import SaisiePointage  from './pages/pointage/SaisiePointage';
+import RhAccueil        from './pages/rh/RhAccueil';
+import GestionEquipes   from './pages/rh/GestionEquipes';
+import AnalyseHeuresSupp from './pages/rh/AnalyseHeuresSupp';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -84,9 +87,18 @@ function AppRoutes() {
           <PrivateRoute roles={TOUS}><AnalyseQualite /></PrivateRoute>
         } />
 
-        {/* Pointage — tous */}
+        {/* RH (Gestion d'équipe, Pointage, Analyse heures supp.) — sauf opérateur */}
         <Route path="pointage" element={
+          <PrivateRoute roles={TOUS}><RhAccueil /></PrivateRoute>
+        } />
+        <Route path="pointage/equipes" element={
+          <PrivateRoute roles={TOUS}><GestionEquipes /></PrivateRoute>
+        } />
+        <Route path="pointage/saisie" element={
           <PrivateRoute roles={TOUS}><SaisiePointage /></PrivateRoute>
+        } />
+        <Route path="pointage/heures-supp" element={
+          <PrivateRoute roles={TOUS}><AnalyseHeuresSupp /></PrivateRoute>
         } />
 
         {/* Alertes — tous */}

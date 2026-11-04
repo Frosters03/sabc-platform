@@ -1217,6 +1217,30 @@ def export_excel_occasionnel(
                  _content_disposition(f"Pointage_Occasionnel_SEM{sem_num}_{date_lundi}.xlsx")}
     )
 
+@router.get("/analyse-heures-supp")
+def analyse_heures_supp(
+    mois:      str            = Query(..., description="YYYY-MM"),
+    equipe_id: Optional[int]  = Query(None),
+    chaine:    Optional[str]  = Query(None),
+    quota:     float          = Query(40.0, gt=0, le=200),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(require_role("manager", "chef_atelier", "contremaitre"))
+):
+    """Cumul mensuel des heures supp par personne, quota, prévision et suggestions (module RH)."""
+    from services.heures_supp_service import analyser, bornes_mois
+    try:
+        annee, num = (int(x) for x in mois.split("-"))
+        if not 1 <= num <= 12:
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Paramètre mois invalide (format AAAA-MM)")
+    debut, fin = bornes_mois(annee, num)
+    query = db.query(Pointage).filter(Pointage.date >= debut, Pointage.date <= fin)
+    if equipe_id: query = query.filter(Pointage.equipe_id == equipe_id)
+    if chaine:    query = query.filter(Pointage.chaine    == chaine)
+    return analyser(query.all(), annee, num, quota)
+
+
 @router.get("/rapport-ab")
 def rapport_absences_non_justifiees(
     date_debut: date = Query(...),
@@ -1263,4 +1287,4 @@ def rapport_absences_non_justifiees(
     
     # Trier par nb absences décroissant
     result = sorted(rapport.values(), key=lambda x: x["nb_absences"], reverse=True)
-    return result
+    return result
