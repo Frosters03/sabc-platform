@@ -592,6 +592,7 @@ const pageTitles = {
   '/pointage/equipes':  "Gestion d'équipe",
   '/pointage/saisie':   'Pointage Personnel',
   '/pointage/heures-supp': 'Analyse Heures Supp.',
+  '/pointage/export':   'Export Pointages',
 };
 
 // ── LAYOUT PRINCIPAL ──────────────────────────────────────

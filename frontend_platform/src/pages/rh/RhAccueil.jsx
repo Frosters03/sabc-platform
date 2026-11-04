@@ -17,10 +17,17 @@ const ICON_HS = (c) => (
   </svg>
 );
 
+const ICON_EXPORT = (c) => (
+  <svg width="36" height="36" viewBox="0 0 24 24" fill={c}>
+    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+  </svg>
+);
+
 const CARTES = [
   { route: "/pointage/equipes",     titre: "Gestion d'équipe",        desc: "Équipes et membres",                     color: "#10B981", bg: "rgba(16,185,129,0.08)", icon: ICON_EQUIPE },
   { route: "/pointage/saisie",      titre: "Pointage personnel",      desc: "Saisie des présences par quart",         color: "#DA291C", bg: "rgba(218,41,28,0.08)",  icon: ICON_POINTAGE },
   { route: "/pointage/heures-supp", titre: "Analyse heures supp.",    desc: "Quotas, prévisions et suggestions (IA)", color: "#F5A623", bg: "rgba(245,166,35,0.08)", icon: ICON_HS },
+  { route: "/pointage/export",      titre: "Export Pointages",        desc: "Fiches Excel/PDF, rapport AB, heures supp.", color: "#3B82F6", bg: "rgba(59,130,246,0.08)", icon: ICON_EXPORT },
 ];
 
 export default function RhAccueil() {
@@ -36,7 +43,7 @@ export default function RhAccueil() {
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: T.text, margin: 0 }}>RH</h1>
-            <p style={{ fontSize: 13, color: T.textSoft, margin: 0 }}>Équipes, pointage et heures supplémentaires</p>
+            <p style={{ fontSize: 13, color: T.textSoft, margin: 0 }}>Équipes, pointage, heures supplémentaires et exports</p>
           </div>
         </div>
       </div>

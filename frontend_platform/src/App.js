@@ -17,6 +17,7 @@ import SaisiePointage  from './pages/pointage/SaisiePointage';
 import RhAccueil        from './pages/rh/RhAccueil';
 import GestionEquipes   from './pages/rh/GestionEquipes';
 import AnalyseHeuresSupp from './pages/rh/AnalyseHeuresSupp';
+import ExportPointages from './pages/rh/ExportPointages';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -99,6 +100,9 @@ function AppRoutes() {
         } />
         <Route path="pointage/heures-supp" element={
           <PrivateRoute roles={TOUS}><AnalyseHeuresSupp /></PrivateRoute>
+        } />
+        <Route path="pointage/export" element={
+          <PrivateRoute roles={TOUS}><ExportPointages /></PrivateRoute>
         } />
 
         {/* Alertes — tous */}
