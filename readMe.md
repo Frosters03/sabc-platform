@@ -55,7 +55,7 @@ $    uvicorn main:app --reload
 
 
 # Documentation Fonctionnelle du Projet
-# SABC Packaging Platform
+# SABC Production Manager
 
 ## Prérequis
 - Python 3.11

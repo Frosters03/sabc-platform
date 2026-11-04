@@ -118,7 +118,7 @@ export default function Login() {
           margin: '0 0 4px',
           letterSpacing: 0.5,
         }}>
-          Packaging Manager
+          Production Manager
         </h1>
         <p style={{
           fontSize: 12,
