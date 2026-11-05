@@ -1222,11 +1222,11 @@ def analyse_heures_supp(
     mois:      str            = Query(..., description="YYYY-MM"),
     equipe_id: Optional[int]  = Query(None),
     chaine:    Optional[str]  = Query(None),
-    quota:     float          = Query(40.0, gt=0, le=200),
+    quota:     float          = Query(8.0, gt=0, le=40),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(require_role("manager", "chef_atelier", "contremaitre"))
 ):
-    """Cumul mensuel des heures supp par personne, quota, prévision et suggestions (module RH)."""
+    """Heures supp par personne et par semaine (plafond 8 h/semaine), cumul du mois, prévision et suggestions (module RH)."""
     from services.heures_supp_service import analyser, bornes_mois
     try:
         annee, num = (int(x) for x in mois.split("-"))

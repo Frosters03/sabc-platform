@@ -4,13 +4,13 @@ import { equipesAPI, pointagesAPI } from "../../services/api";
 import BoutonRetour from "../../components/BoutonRetour";
 
 const NIVEAUX = {
-  ok:        { label: "Dans le quota",  color: "#10B981" },
-  attention: { label: "Proche du quota", color: "#F59E0B" },
-  depasse:   { label: "Quota dépassé",  color: "#EF4444" },
+  ok:        { label: "Sous le plafond",  color: "#10B981" },
+  attention: { label: "Proche du plafond", color: "#F59E0B" },
+  depasse:   { label: "Plafond dépassé",  color: "#EF4444" },
 };
 const GRAVITES = {
-  critique:  { color: "#EF4444", bg: "rgba(239,68,68,0.08)",  titre: "Quota dépassé" },
-  attention: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", titre: "Proche du quota" },
+  critique:  { color: "#EF4444", bg: "rgba(239,68,68,0.08)",  titre: "Plafond dépassé" },
+  attention: { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", titre: "Proche du plafond" },
   prevision: { color: "#3B82F6", bg: "rgba(59,130,246,0.08)", titre: "Prévision IA" },
 };
 
@@ -48,7 +48,7 @@ export default function AnalyseHeuresSupp() {
 
   const [mois, setMois] = useState(moisCourant());
   const [equipeId, setEquipeId] = useState("");
-  const [quota, setQuota] = useState(40);
+  const [quota, setQuota] = useState(8);
   const [equipes, setEquipes] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -93,8 +93,8 @@ export default function AnalyseHeuresSupp() {
           </select>
         </div>
         <div>
-          <label style={LS}>Quota (h / mois)</label>
-          <input type="number" min="1" max="200" value={quota} onChange={e => setQuota(e.target.value)} style={IS} />
+          <label style={LS}>Plafond (h supp / semaine)</label>
+          <input type="number" min="1" max="40" value={quota} onChange={e => setQuota(e.target.value)} style={IS} />
         </div>
       </div>
 
@@ -106,14 +106,14 @@ export default function AnalyseHeuresSupp() {
           {/* Résumé */}
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
             <Kpi T={T} label="Personnes suivies" value={data.resume.nb_personnes} color={T.text} />
-            <Kpi T={T} label="Quota dépassé" value={data.resume.nb_depasse} color="#EF4444" />
-            <Kpi T={T} label="Proches du quota (≥ 80 %)" value={data.resume.nb_attention} color="#F59E0B" />
+            <Kpi T={T} label="Plafond dépassé" value={data.resume.nb_depasse} color="#EF4444" />
+            <Kpi T={T} label="Proches du plafond (≥ 80 %)" value={data.resume.nb_attention} color="#F59E0B" />
             <Kpi T={T} label="Total heures supp." value={`${data.resume.total_hs} h`} color="#3B82F6" />
           </div>
 
           {data.resume.nb_personnes === 0 && (
             <div style={{ textAlign: "center", padding: 40, color: T.textSoft, fontSize: 13, background: T.card, border: `1px dashed ${T.border}`, borderRadius: 14 }}>
-              Aucun pointage pour ce mois. Les heures supp. se calculent sur les pointages saisis (heures normales + fériées au-delà de 40 h par semaine).
+              Aucun pointage pour ce mois. Les heures supp. se calculent sur les pointages saisis (heures normales + fériées au-delà de 40 h par semaine, plafond de 8 h supp. par semaine).
             </div>
           )}
 
@@ -159,18 +159,31 @@ export default function AnalyseHeuresSupp() {
                         <span style={{ color: T.text, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                           {m.nom_prenom} <span style={{ color: T.textSoft, fontWeight: 400, fontSize: 11 }}>{m.fonction}</span>
                         </span>
-                        <span style={{ color: nv.color, fontWeight: 700, whiteSpace: "nowrap" }}>{m.hs_mois} / {m.quota} h</span>
+                        <span style={{ color: nv.color, fontWeight: 700, whiteSpace: "nowrap" }}>{m.pire_semaine} / {m.quota} h <span style={{ fontWeight: 400, fontSize: 11 }}>(pire semaine)</span></span>
                       </div>
                       <div style={{ height: 6, borderRadius: 3, background: T.border, overflow: "hidden", margin: "5px 0 3px" }}>
                         <div style={{ height: "100%", width: `${Math.min(100, m.pct)}%`, background: nv.color }} />
                       </div>
                       <div style={{ fontSize: 11, color: T.textSoft }}>
-                        {nv.label} · {m.pct.toFixed(0)} %
-                        {m.niveau !== "depasse" && ` · reste ${m.reste} h`}
+                        {nv.label} · {m.pct.toFixed(0)} % · {m.hs_mois} h supp. sur le mois
+                        {m.nb_semaines_depassees > 0 && ` · ${m.nb_semaines_depassees} semaine${m.nb_semaines_depassees > 1 ? "s" : ""} au-dessus du plafond`}
                         {m.prevision && (m.prevision.atteint_le
-                          ? ` · quota atteint vers le ${fmtDate(m.prevision.atteint_le)} à ce rythme`
-                          : ` · fin de mois estimée : ${m.prevision.fin_de_mois} h`)}
+                          ? ` · plafond atteint vers le ${fmtDate(m.prevision.atteint_le)} à ce rythme`
+                          : ` · fin de semaine estimée : ${m.prevision.fin_de_semaine} h`)}
                       </div>
+                      {m.semaines.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                          {m.semaines.map(s => (
+                            <span key={s.semaine} title={`Semaine du ${fmtDate(s.semaine)} : ${s.heures} h travaillées`} style={{
+                              fontSize: 10, padding: "1px 6px", borderRadius: 6,
+                              background: s.depasse ? "rgba(239,68,68,0.12)" : s.hs > 0 ? "rgba(245,158,11,0.10)" : T.borderSoft,
+                              color: s.depasse ? "#EF4444" : s.hs > 0 ? "#F59E0B" : T.textSoft, fontWeight: s.depasse ? 700 : 500,
+                            }}>
+                              {fmtDate(s.semaine).slice(0, 5)} · {s.hs} h
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -179,14 +192,14 @@ export default function AnalyseHeuresSupp() {
               {eq.suggestion.length > 0 && (
                 <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(16,185,129,0.08)", fontSize: 12, color: T.text }}>
                   <strong style={{ color: "#10B981" }}>Suggestion IA :</strong> pour les prochaines heures supp., solliciter en priorité{" "}
-                  {eq.suggestion.map(s => `${s.nom_prenom} (${s.hs_mois} h faites, ${s.reste} h de marge)`).join(", ")}.
+                  {eq.suggestion.map(s => `${s.nom_prenom} (${s.pire_semaine} h en pire semaine, ${s.reste} h de marge cette semaine)`).join(", ")}.
                 </div>
               )}
             </div>
           ))}
 
           <p style={{ fontSize: 11, color: T.textSoft, marginTop: 8 }}>
-            Calcul : heures supp. d'une semaine = max(0, heures normales + fériées − 40). Une semaine compte dans le mois de son jeudi.
+            Calcul : heures supp. d'une semaine = max(0, heures normales + fériées − 40), plafonnées à 8 h par semaine (consigne direction). Une semaine compte dans le mois de son jeudi.
             {data.derniere_saisie && ` Dernier pointage du mois : ${fmtDate(data.derniere_saisie)}.`}
           </p>
         </>
