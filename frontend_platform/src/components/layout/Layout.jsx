@@ -8,6 +8,7 @@ const IconDashboard = ({size=20,color='currentColor'}) => <svg width={size} heig
 const IconBolt      = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>;
 const IconScience   = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M7 2v2h1v9.26l-5 6.74V22h18v-2.74l-5-6.74V4h1V2H7zm5 14c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm3-4H9V4h6v8z"/></svg>;
 const IconBell      = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>;
+const IconKpi       = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M3 3v18h18v-2H5V3H3zm4 10h3v5H7v-5zm5-6h3v11h-3V7zm5 3h3v8h-3v-8z"/></svg>;
 const IconPerson    = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
 const IconLogout    = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>;
 const IconDarkMode  = ({size=20,color='currentColor'}) => <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>;
@@ -63,7 +64,7 @@ function useIsMobile() {
 }
 
 // ── NAV ITEMS ─────────────────────────────────────────────
-function useNavItems() {
+function useNavItems() {  // retourne { items, nbAlertes }
   const { hasRole } = useAuth();
   const items = [];
 
@@ -85,18 +86,20 @@ function useNavItems() {
   if (hasRole('operateur')) {
     items.push({ path:'/energie/releves', icon:IconBolt,    label:'Énergie', short:'Énergie' });
     items.push({ path:'/qualite/data',    icon:IconScience, label:'Qualité', short:'Qualité' });
-    items.push({ path:'/alertes',         icon:IconBell,    label:'Alertes',
+    items.push({ path:'/alertes',         icon:IconBell,    label:'Alertes', pcOnly:true,
                  badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
   }
   if (hasRole('contremaitre', 'chef_atelier', 'manager')) {
     items.push({ path:'/energie',     icon:IconBolt,      label:'Énergie' });
     items.push({ path:'/qualite',     icon:IconScience,   label:'Qualité' });
     items.push({ path:'/pointage',    icon:IconClipboard, label:'RH' });
-    items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes',
+    items.push({ path:'/kpi',        icon:IconKpi,       label:'KPI' });
+    // Alertes : menu latéral PC uniquement (sur mobile, cloche dans l'en-tête)
+    items.push({ path:'/alertes',     icon:IconBell,      label:'Alertes', pcOnly:true,
                  badge: nbAlertes.total, critique: nbAlertes.critiques > 0 });
     items.push({ path:'/maintenance', icon:IconBrain,     label:'Maintenance IA', short:'Maint. IA' });
   }
-  return items;
+  return { items, nbAlertes };
 }
 
 // ── SIDEBAR PC ────────────────────────────────────────────
@@ -444,7 +447,7 @@ function BottomNavbar({ items, T }) {
 }
 
 // ── HEADER MOBILE ─────────────────────────────────────────
-function MobileHeader({ T, dark, toggleDark, title }) {
+function MobileHeader({ T, dark, toggleDark, title, nbAlertes = { total: 0, critiques: 0 } }) {
   const { logout, user, hasRole } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -482,6 +485,23 @@ function MobileHeader({ T, dark, toggleDark, title }) {
 
         {/* Boutons droite */}
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {/* Alertes (cloche + badge) */}
+          <button onClick={() => navigate('/alertes')} aria-label="Alertes" style={{
+            position:'relative', width:34, height:34, borderRadius:10,
+            background:T.borderSoft, border:`1px solid ${T.border}`,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <IconBell size={17} color={nbAlertes.critiques > 0 ? '#EF4444' : T.textSoft}/>
+            {nbAlertes.total > 0 && (
+              <span style={{
+                position:'absolute', top:-5, right:-5, minWidth:16, height:16, padding:'0 4px',
+                borderRadius:8, boxSizing:'border-box',
+                background: nbAlertes.critiques > 0 ? '#EF4444' : '#F59E0B', color:'#fff',
+                fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center',
+              }}>{nbAlertes.total > 99 ? '99+' : nbAlertes.total}</span>
+            )}
+          </button>
+
           {/* Toggle dark */}
           <button onClick={toggleDark} style={{
             width:34, height:34, borderRadius:10,
@@ -586,6 +606,7 @@ const pageTitles = {
   '/qualite/affichage': 'Cartes SPC',
   '/qualite/analyse':   'Analyse Qualité',
   '/alertes':           'Alertes',
+  '/kpi':               'KPI',
   '/maintenance':       'Maintenance Prédictive IA',
   '/admin/users':       'Administration',
   '/pointage':          'RH',
@@ -598,7 +619,7 @@ const pageTitles = {
 // ── LAYOUT PRINCIPAL ──────────────────────────────────────
 export default function Layout() {
   const isMobile = useIsMobile();
-  const items    = useNavItems();
+  const { items, nbAlertes } = useNavItems();
   const location = useLocation();
   const [dark, setDark] = useState(
     () => localStorage.getItem('sabc_dark') === 'true'
@@ -634,7 +655,7 @@ export default function Layout() {
 
         {/* Header mobile */}
         {isMobile && (
-          <MobileHeader T={T} dark={dark} toggleDark={toggleDark} title={title} />
+          <MobileHeader T={T} dark={dark} toggleDark={toggleDark} title={title} nbAlertes={nbAlertes} />
         )}
 
         <div style={{
@@ -652,7 +673,7 @@ export default function Layout() {
         </div>
 
         {/* Bottom navbar mobile */}
-        {isMobile && <BottomNavbar items={items} T={T} />}
+        {isMobile && <BottomNavbar items={items.filter(i => !i.pcOnly)} T={T} />}
       </div>
     </ThemeContext.Provider>
   );

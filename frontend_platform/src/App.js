@@ -18,6 +18,7 @@ import RhAccueil        from './pages/rh/RhAccueil';
 import GestionEquipes   from './pages/rh/GestionEquipes';
 import AnalyseHeuresSupp from './pages/rh/AnalyseHeuresSupp';
 import ExportPointages from './pages/rh/ExportPointages';
+import Kpi from './pages/kpi/Kpi';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -103,6 +104,11 @@ function AppRoutes() {
         } />
         <Route path="pointage/export" element={
           <PrivateRoute roles={TOUS}><ExportPointages /></PrivateRoute>
+        } />
+
+        {/* KPI — tous sauf opérateur */}
+        <Route path="kpi" element={
+          <PrivateRoute roles={TOUS}><Kpi /></PrivateRoute>
         } />
 
         {/* Alertes — tous */}
